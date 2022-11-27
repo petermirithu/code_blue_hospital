@@ -7,35 +7,36 @@ import {
     Image,
     Input,
     Checkbox,
-    useToast,    
+    useToast,
     HStack
 } from "native-base";
-import { StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
-import { login_user, storeAuthToken} from "../services/Authentication";
+import { StyleSheet, Dimensions, TouchableOpacity, ImageBackground } from 'react-native';
+import { login_user, storeAuthToken } from "../services/Authentication";
 import { navigateReset } from "../services/RootNavigation";
 import { useDispatch } from "react-redux";
 import { setUserProfile } from "../redux/UserProfileSlice";
 import Toaster from "./Toaster";
+import { Height } from "../services/GlobalConfig";
 
 const { height } = Dimensions.get('window');
 
 export default function Login({ source }) {
 
-    const dispatch = useDispatch();    
+    const dispatch = useDispatch();
 
     const toast = useToast();
 
     const [showPassword, setShowPassword] = useState(false);
-    const [formData, updateForm] = useState({ username: "", password: "" });    
-    const [isRequesting, setIsRequesting] = useState(false);    
+    const [formData, updateForm] = useState({ username: "", password: "" });
+    const [isRequesting, setIsRequesting] = useState(false);
 
     const handleFormData = (type, text) => {
         if (type == "username") {
             updateForm({ username: text, password: formData.password });
         }
-        else{
+        else {
             updateForm({ username: formData.username, password: text })
-        }        
+        }
     }
 
     const routeUser = (userData) => {
@@ -80,7 +81,7 @@ export default function Login({ source }) {
             await login_user(formData).then(async result => {
                 storeAuthToken(result?.data?.token)
                 delete result.data.token;
-                routeUser(result?.data);                
+                routeUser(result?.data);
             }).catch(error => {
                 if (error?.response?.status == 404) {
                     const toastId = "noUsername";
@@ -91,7 +92,7 @@ export default function Login({ source }) {
                             render: () => <Toaster title={error?.response?.data} status="warning" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
                         })
                     }
-                }               
+                }
                 else {
                     const toastId = "authError";
                     if (!toast.isActive(toastId)) {
@@ -105,20 +106,23 @@ export default function Login({ source }) {
                 setIsRequesting(false);
             });
         }
-    }    
+    }
 
     useEffect(() => {
 
     }, [showPassword, formData, isRequesting])
 
     return (
-        <View style={styles.container} width="100%">
+        <View style={styles.container} height={Height}>
             <Flex direction="row" flex="1">
-                <Image source={{ uri: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1453&q=80" }} alt="Introduction image" style={styles.image} />
+                <>                    
+                    <Image source={{ uri: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1453&q=80" }} alt="Introduction image" style={styles.image} />                    
+                    <Text style={styles.header} color="primary.500">Code Blue Hospital</Text>
+                </>
                 <View flex={1} alignItems="center" justifyContent="center">
                     <View style={styles.card}>
                         <Text style={styles.title} color={"#393A35"}>Sign In</Text>
-                        <Text style={styles.subTitle}>Welcome to  <Text style={styles.subTitle} color="#00bbf9">Code Blue Hospital</Text></Text>
+                        <Text style={styles.subTitle}>Welcome to  our <Text style={styles.subTitle} color="#00bbf9">Hospital management system</Text></Text>
                         <Text style={styles.text}>Username</Text>
                         <Input nativeID="username" variant="underlined" marginBottom={5} placeholder={"Enter your username"} type="text" value={formData.username} style={styles.input} onChangeText={(username) => handleFormData('username', username)} />
                         <Text style={styles.text}>Password</Text>
@@ -132,17 +136,17 @@ export default function Login({ source }) {
                             </TouchableOpacity>
                         </Flex>
                         <Button isLoading={isRequesting} isLoadingText={"Authenticating ..."} onPress={submitLoginDetails} style={styles.signIn}>Sign In</Button>
-                    </View>                    
+                    </View>
                 </View>
             </Flex>
         </View>
     )
 }
-const styles = StyleSheet.create({    
+const styles = StyleSheet.create({
     container: {
-        flex: 1,   
-        backgroundColor:"#f8f9fa"               
-    },
+        flex: 1,
+        backgroundColor: "#e9ecef"
+    },    
     image: {
         width: "50%",
         height: height,
@@ -179,19 +183,29 @@ const styles = StyleSheet.create({
         position: "relative",
         marginTop: 50,
         marginBottom: 30,
-        width: 500,        
-        shadowColor:"black",
+        width: 500,
+        shadowColor: "black",
         shadowOffset: {
             width: 0,
             height: 12,
         },
         shadowOpacity: 0.1,
         shadowRadius: 16.0,
-        elevation: 20,        
+        elevation: 20,
     },
 
     signIn: {
         alignSelf: "center",
         width: "100%",
     },
+    header:{
+        position:"absolute",
+        top:50,
+        fontSize: 60,
+        textAlign: "center",
+        paddingBottom: 10,
+        fontFamily: "ChangaOne",
+        lineHeight: 55, 
+        left:50,             
+    }
 })
