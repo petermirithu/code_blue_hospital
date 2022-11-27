@@ -6,7 +6,7 @@ import {
     Input,
     Radio,
     HStack,
-    useToast,    
+    useToast,
 } from "native-base";
 import { useEffect, useState } from "react";
 import Loader from "./Loader";
@@ -16,24 +16,29 @@ import { useSelector, useDispatch } from "react-redux";
 import Toaster from "./Toaster";
 import { delete_user, update_user } from "../services/Authentication";
 import Moment from 'moment';
-import { add_patient, get_patients} from "../services/PatientService";
+import { add_patient, get_patients } from "../services/PatientService";
 import { setPatients } from "../redux/PatientsSlice";
+import { useAssets } from 'expo-asset';
 
 export default function Patients({ text }) {
     const toast = useToast();
     const dispatch = useDispatch();
+
+    const [assets] = useAssets([
+        require('../assets/animations/empty.gif'),
+    ]);
 
     const [showModal, setShowModal] = useState(false);
 
     const formDataTemplate = {
         name: "", email: "",
         phone_no: "",
-        date_of_birth: "", id: "", weight: "", height: ""        
+        date_of_birth: "", id: "", weight: "", height: ""
     }
 
     const [formData, setFormData] = useState(formDataTemplate);
 
-    const [genderRadio, setGenderRadio] = useState("");    
+    const [genderRadio, setGenderRadio] = useState("");
     const [modalState, setModalState] = useState("add");
     const [saveUpdateLoading, setSaveUpdateLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
@@ -42,12 +47,13 @@ export default function Patients({ text }) {
 
     const [tableData, setTableData] = useState([]);
 
-    const { patients } = useSelector((state) => state.patients);    
+    const { patients } = useSelector((state) => state.patients);
+    const { userProfile } = useSelector((state) => state.userProfile);
 
     const tableHead = ['Number', 'Name', 'Email', 'Phone_no', "Gender", "Joined On"];
 
     const handleForm = (option, data) => {
-        let currentState = { ...formData }        
+        let currentState = { ...formData }
         if (option == "name") {
             currentState.name = data;
         }
@@ -65,21 +71,32 @@ export default function Patients({ text }) {
         }
         else if (option == "height") {
             currentState.height = data;
-        }        
+        }
         setFormData(currentState);
     }
 
     const addPatient = () => {
         setModalState("add");
         setFormData(formDataTemplate);
-        setGenderRadio("");        
+        setGenderRadio("");
         setShowModal(true);
     }
 
     const selectRecord = (rowData) => {
+        if (userProfile.nurse != true && userProfile.doctor != true) {
+            const toastId = "warningPermisisons";
+            if (!toast.isActive(toastId)) {
+                toast.show({
+                    placement: "top",
+                    id: toastId,
+                    render: () => <Toaster title={"Restricted!"} description={"You don't have permission to access more information"} status="warning" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                })
+            }
+            return
+        }
         setModalState("update");
         const selected = patients[rowData[0] - 1]
-        setGenderRadio(selected?.gender);        
+        setGenderRadio(selected?.gender);
         setFormData({
             name: selected?.name,
             email: selected?.email,
@@ -109,23 +126,23 @@ export default function Patients({ text }) {
         setSaveUpdateLoading(false);
         setDeleteLoading(false);
         setFormData(formDataTemplate);
-        setGenderRadio("");        
+        setGenderRadio("");
         setShowModal(false);
     }
 
     const submitForm = async (option) => {
         setSaveUpdateLoading(true);
         if (option == "save") {
-            const payload = {                
+            const payload = {
                 name: formData.name,
                 email: formData.email,
                 phone_no: formData.phone_no,
                 gender: genderRadio,
                 date_of_birth: formData.date_of_birth,
                 weight: formData.weight,
-                height: formData.height,                
+                height: formData.height,
                 user_type: "patient"
-            }            
+            }
 
             await add_patient(payload).then(async response => {
                 await fetchPatients();
@@ -158,7 +175,7 @@ export default function Patients({ text }) {
                 gender: genderRadio,
                 date_of_birth: formData.date_of_birth,
                 weight: formData.weight,
-                height: formData.height,                  
+                height: formData.height,
                 id: formData.id,
                 user_type: "patient",
             }
@@ -236,7 +253,7 @@ export default function Patients({ text }) {
         }
     }, [showModal, formData, genderRadio, modalState, saveUpdateLoading, pageLoading, tableData, deleteLoading])
 
-    if (pageLoading == null || pageLoading == true) {
+    if (pageLoading == null || pageLoading == true || !assets) {
         return (
             <View alignItems="center" justifyContent="center" flex="1" background="#f8f9fa">
                 <Loader text={"Loading cards ..."}></Loader>
@@ -247,20 +264,30 @@ export default function Patients({ text }) {
     return (
         <>
             <Text style={styles.title}>Patients</Text>
-            <Button style={styles.add} width={100} onPress={() => addPatient()}>Add</Button>
+            {userProfile?.nurse == true ?
+                <Button style={styles.add} width={100} onPress={() => addPatient()}>Add</Button>
+                :
+                <></>
+            }
 
             <Table style={styles.table}>
                 <Row data={tableHead} style={styles.tableData} textStyle={styles.headerText} />
                 {
-                    tableData.map((rowData, index) => (
-                        <TouchableOpacity onPress={() => selectRecord(rowData)}>
-                            <Row
-                                key={index}
-                                data={rowData}
-                                style={[styles.row, index % 2 && { backgroundColor: '#edf2f4' }]}
-                            />
-                        </TouchableOpacity>
-                    ))
+                    (tableData?.length > 0) ?
+                        tableData.map((rowData, index) => (
+                            <TouchableOpacity onPress={() => selectRecord(rowData)}>
+                                <Row
+                                    key={index}
+                                    data={rowData}
+                                    style={[styles.row, index % 2 && { backgroundColor: '#edf2f4' }]}
+                                />
+                            </TouchableOpacity>
+                        ))
+                        :
+                        <View alignItems={"center"}>
+                            <Image source={assets[0]} width={200} height={200}></Image>
+                            <Text>No record for you</Text>
+                        </View>
                 }
             </Table>
 
@@ -270,7 +297,14 @@ export default function Patients({ text }) {
                     {modalState == "add" ?
                         <Modal.Header>Add a Patient</Modal.Header>
                         :
-                        <Modal.Header>Update a Patient</Modal.Header>
+                        <>
+                            {userProfile?.nurse == true ?
+                                <Modal.Header>Update a Patient</Modal.Header>
+                                :
+                                <Modal.Header>View a Patient</Modal.Header>
+                            }
+                        </>
+
                     }
                     <Modal.Body padding={5}>
                         <Text>Name</Text>
@@ -297,7 +331,7 @@ export default function Patients({ text }) {
                                     </HStack>
                                 </Radio.Group>
                             </View>
-                        </HStack>                        
+                        </HStack>
                         <HStack space={3}>
                             <View width={260}>
                                 <Text>Weight in kg</Text>
@@ -307,9 +341,9 @@ export default function Patients({ text }) {
                                 <Text>Height in cm</Text>
                                 <Input key={"height"} variant="underlined" value={formData.height} placeholder="What their height?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("height", val)} />
                             </View>
-                        </HStack> 
+                        </HStack>
                         <Text>Date of Birth</Text>
-                        <Input key={"dob"} variant="underlined" value={formData.date_of_birth} placeholder="When were they born?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("dob", val)} />                                                                                             
+                        <Input key={"dob"} variant="underlined" value={formData.date_of_birth} placeholder="When were they born?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("dob", val)} />
                     </Modal.Body>
                     <Modal.Footer>
                         <Button.Group space={2}>
@@ -319,26 +353,33 @@ export default function Patients({ text }) {
                                 Cancel
                             </Button>
 
-                            {modalState == "add" ?
-                                <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Saving ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
-                                    submitForm("save");
-                                }}>
-                                    Save
-                                </Button>
-                                :
+                            {userProfile?.nurse == true ?
                                 <>
-                                    <Button width={(deleteLoading == true) ? 120 : 100} isDisabled={saveUpdateLoading || deleteLoading} isLoadingText={"Deleteing ..."} isLoading={deleteLoading} colorScheme="error" onPress={() => {
-                                        deletePatient();
-                                    }}>
-                                        Delete
-                                    </Button>
-                                    <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Updating ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
-                                        submitForm("update");
-                                    }}>
-                                        Update
-                                    </Button>
+                                    {modalState == "add" ?
+                                        <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Saving ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
+                                            submitForm("save");
+                                        }}>
+                                            Save
+                                        </Button>
+                                        :
+                                        <>
+                                            <Button width={(deleteLoading == true) ? 120 : 100} isDisabled={saveUpdateLoading || deleteLoading} isLoadingText={"Deleteing ..."} isLoading={deleteLoading} colorScheme="error" onPress={() => {
+                                                deletePatient();
+                                            }}>
+                                                Delete
+                                            </Button>
+                                            <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Updating ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
+                                                submitForm("update");
+                                            }}>
+                                                Update
+                                            </Button>
+                                        </>
+                                    }
                                 </>
+                                :
+                                <></>
                             }
+
                         </Button.Group>
                     </Modal.Footer>
                 </Modal.Content>

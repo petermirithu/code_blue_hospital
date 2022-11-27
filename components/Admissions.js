@@ -8,7 +8,8 @@ import {
     HStack,
     useToast,
     TextArea,
-    Select
+    Select,
+    Image
 } from "native-base";
 import { useEffect, useState } from "react";
 import Loader from "./Loader";
@@ -17,22 +18,30 @@ import { Table, Row } from 'react-native-table-component';
 import { useSelector, useDispatch } from "react-redux";
 import Toaster from "./Toaster";
 import Moment from 'moment';
-import { add_admissions, get_admissions,update_admissions,delete_admission } from "../services/AdmissionsService";
+import { add_admissions, get_admissions, update_admissions, delete_admission } from "../services/AdmissionsService";
 import { setAdmisisons } from "../redux/AdmissionsSlice";
+import { useAssets } from 'expo-asset';
 
 export default function Admissions({ text }) {
     const toast = useToast();
     const dispatch = useDispatch();
 
+    const [assets] = useAssets([
+        require('../assets/animations/empty.gif'),
+    ]);
+
     const [showModal, setShowModal] = useState(false);
 
-    const formDataTemplate = {        
+    const formDataTemplate = {
         symptoms: "",
-        id:"",
+        id: "",
+        prescription:"",
+        diagnosis:"",
+        notes:""
     }
 
     const [formData, setFormData] = useState(formDataTemplate);
-    
+
     const [selectedDoctor, setSelectedDoctor] = useState("");
     const [selectedPatient, setSelectedPatient] = useState("");
 
@@ -52,29 +61,52 @@ export default function Admissions({ text }) {
     const tableHead = ['Number', 'Patient Name', 'Doctor Name', 'Nurse Name', "Treated", "Created On"];
 
     const handleForm = (option, data) => {
-        let currentState = { ...formData }       
+        let currentState = { ...formData }
         if (option == "symptoms") {
             currentState.symptoms = data;
         }
+        else if (option == "prescription") {
+            currentState.prescription = data;
+        }
+        else if (option == "diagnosis") {
+            currentState.diagnosis = data;
+        }
+        else if (option == "notes") {
+            currentState.notes = data;
+        }      
         setFormData(currentState);
     }
 
     const admitPatient = () => {
         setModalState("add");
-        setFormData(formDataTemplate);        
+        setFormData(formDataTemplate);
         setSelectedDoctor("");
         setSelectedPatient("");
         setShowModal(true);
     }
 
     const selectRecord = (rowData) => {
+        if (userProfile.nurse != true && userProfile.doctor != true) {
+            const toastId = "warningPermisisons";
+            if (!toast.isActive(toastId)) {
+                toast.show({
+                    placement: "top",
+                    id: toastId,
+                    render: () => <Toaster title={"Restricted!"} description={"You don't have permission to access more information"} status="warning" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                })
+            }
+            return
+        }
         setModalState("update");
-        const selected = admissions[rowData[0] - 1]        
+        const selected = admissions[rowData[0] - 1]
         setSelectedDoctor(selected?.doctor?.id);
         setSelectedPatient(selected?.patient?.id);
-        setFormData({            
-            symptoms:selected?.symptoms,                                    
-            id: selected?.id
+        setFormData({
+            symptoms: selected?.symptoms,
+            id: selected?.id,
+            prescription:selected?.prescription,
+            diagnosis:selected?.diagnosis,
+            notes:selected?.notes,
         })
         setShowModal(true);
     }
@@ -95,7 +127,7 @@ export default function Admissions({ text }) {
         });
         setSaveUpdateLoading(false);
         setDeleteLoading(false);
-        setFormData(formDataTemplate);        
+        setFormData(formDataTemplate);
         setSelectedDoctor("");
         setSelectedPatient("");
         setShowModal(false);
@@ -105,10 +137,10 @@ export default function Admissions({ text }) {
         setSaveUpdateLoading(true);
         if (option == "save") {
             const payload = {
-                nurse_id: userProfile.id,                
+                nurse_id: userProfile.id,
                 doctor_id: selectedDoctor,
-                patient_id:selectedPatient,                
-                symptoms: formData.symptoms,                
+                patient_id: selectedPatient,
+                symptoms: formData.symptoms,
             }
             await add_admissions(payload).then(async response => {
                 await fetchAdmissions();
@@ -134,11 +166,14 @@ export default function Admissions({ text }) {
             })
         }
         else {
-            const payload = {                                             
+            const payload = {
                 doctor_id: selectedDoctor,
-                patient_id:selectedPatient,                
-                symptoms: formData.symptoms,                 
-                admission_id: formData.id,                
+                patient_id: selectedPatient,
+                symptoms: formData.symptoms,
+                prescription:formData.prescription,
+                diagnosis:formData.diagnosis,
+                notes:formData.notes,
+                admission_id: formData.id,
             }
             await update_admissions(payload).then(async response => {
                 await fetchAdmissions();
@@ -196,10 +231,18 @@ export default function Admissions({ text }) {
     const formatTableData = (newData) => {
         let counter = 1;
         let tableData_ = []
-        for (let record of newData) {            
-            let payload = [counter, record?.patient?.name, record?.doctor?.name, record?.nurse?.name, record?.treated.toString(), Moment(record?.created_at).format("dddd, MMMM Do YYYY, h:mm:ss a")];
-            tableData_.push(payload);
-            counter++;
+
+        for (let record of newData) {
+            if (userProfile?.doctor == true && record?.doctor?.id == userProfile?.id) {
+                let payload = [counter, record?.patient?.name, record?.doctor?.name, record?.nurse?.name, record?.treated.toString(), Moment(record?.created_at).format("dddd, MMMM Do YYYY, h:mm:ss a")];
+                tableData_.push(payload);
+                counter++;
+            }
+            else if (userProfile?.doctor != true) {
+                let payload = [counter, record?.patient?.name, record?.doctor?.name, record?.nurse?.name, record?.treated.toString(), Moment(record?.created_at).format("dddd, MMMM Do YYYY, h:mm:ss a")];
+                tableData_.push(payload);
+                counter++;
+            }
         }
         setTableData([]);
         setTableData(tableData_);
@@ -212,9 +255,9 @@ export default function Admissions({ text }) {
             formatTableData(admissions);
             setPageLoading(false);
         }
-    }, [showModal, formData, modalState, saveUpdateLoading, pageLoading, tableData, deleteLoading, selectedDoctor,selectedPatient])
+    }, [showModal, formData, modalState, saveUpdateLoading, pageLoading, tableData, deleteLoading, selectedDoctor, selectedPatient])
 
-    if (pageLoading == null || pageLoading == true) {
+    if (pageLoading == null || pageLoading == true || !assets) {
         return (
             <View alignItems="center" justifyContent="center" flex="1" background="#f8f9fa">
                 <Loader text={"Loading cards ..."}></Loader>
@@ -224,21 +267,37 @@ export default function Admissions({ text }) {
 
     return (
         <>
-            <Text style={styles.title}>Admissions</Text>
-            <Button style={styles.add} width={100} onPress={() => admitPatient()}>Admit</Button>
+            {userProfile.doctor == true ?
+                <Text style={styles.title}>Medical Records</Text>
+                :
+                <Text style={styles.title}>Admissions</Text>
+            }
+
+
+            {userProfile.nurse == true ?
+                <Button style={styles.add} width={100} onPress={() => admitPatient()}>Admit</Button>
+                :
+                <></>
+            }
 
             <Table style={styles.table}>
                 <Row data={tableHead} style={styles.tableData} textStyle={styles.headerText} />
                 {
-                    tableData.map((rowData, index) => (
-                        <TouchableOpacity onPress={() => selectRecord(rowData)}>
-                            <Row
-                                key={index}
-                                data={rowData}
-                                style={[styles.row, index % 2 && { backgroundColor: '#edf2f4' }]}
-                            />
-                        </TouchableOpacity>
-                    ))
+                    (tableData?.length > 0) ?
+                        tableData.map((rowData, index) => (
+                            <TouchableOpacity onPress={() => selectRecord(rowData)}>
+                                <Row
+                                    key={index}
+                                    data={rowData}
+                                    style={[styles.row, index % 2 && { backgroundColor: '#edf2f4' }]}
+                                />
+                            </TouchableOpacity>
+                        ))
+                        :
+                        <View alignItems={"center"}>
+                            <Image source={assets[0]} width={200} height={200}></Image>
+                            <Text>No record for you</Text>
+                        </View>
                 }
             </Table>
 
@@ -248,27 +307,51 @@ export default function Admissions({ text }) {
                     {modalState == "add" ?
                         <Modal.Header>Admit a Patient</Modal.Header>
                         :
-                        <Modal.Header>Update an Admission</Modal.Header>
+                        <>
+                            {userProfile.doctor == true ?
+                                <Modal.Header>Update Medical Record</Modal.Header>
+                                :
+                                <Modal.Header>Update an Admission</Modal.Header>
+                            }
+                        </>
+
                     }
                     <Modal.Body padding={5}>
                         <Text>Select a patient</Text>
-                        <Select variant="underlined" marginBottom={5} selectedValue={selectedPatient} width={"100%"} placeholder="Pick a patient to book" mt={1} onValueChange={val => setSelectedPatient(val)}>
+                        <Select variant="underlined" marginBottom={5} selectedValue={selectedPatient} width={"100%"} placeholder="Pick a patient to book" mt={1} onValueChange={val => setSelectedPatient(val)} isDisabled={userProfile?.nurse != true}>
                             {
                                 patients.map((patientData, index) => (
                                     <Select.Item label={patientData.name} value={patientData.id} />
                                 ))
                             }
                         </Select>
-                        <Text>Select a Doctor</Text>
-                        <Select variant="underlined" marginBottom={5} selectedValue={selectedDoctor} width={"100%"} placeholder="Assign a doctor to attend to the patient" mt={1} onValueChange={val => setSelectedDoctor(val)}>
-                            {
-                                doctors.map((doctorData, index) => (
-                                    <Select.Item label={doctorData.name + " - " + doctorData.specialization} value={doctorData.id} />
-                                ))
-                            }
-                        </Select>                       
+                        {userProfile?.doctor != true ?
+                            <>
+                                <Text>Select a Doctor</Text>
+                                <Select variant="underlined" marginBottom={5} selectedValue={selectedDoctor} width={"100%"} placeholder="Assign a doctor to attend to the patient" mt={1} onValueChange={val => setSelectedDoctor(val)} isDisabled={userProfile?.nurse != true}>
+                                    {
+                                        doctors.map((doctorData, index) => (
+                                            <Select.Item label={doctorData.name + " - " + doctorData.specialization} value={doctorData.id} />
+                                        ))
+                                    }
+                                </Select>
+                            </>
+                            :
+                            <></>
+                        }
                         <Text>Symptoms</Text>
                         <TextArea h={20} key={"symptoms"} variant="underlined" value={formData.symptoms} placeholder="What symptopms does the patient have?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("symptoms", val)} />
+
+                        <Text>Diagnosis</Text>
+                        <TextArea h={20} key={"diagnosis"} variant="underlined" value={formData.diagnosis} placeholder="The patient was diagnosed with?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("diagnosis", val)} />
+
+                        <Text>Notes</Text>
+                        <TextArea h={20} key={"notes"} variant="underlined" value={formData.notes} placeholder="Write additional notes?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("notes", val)} />
+
+                        <Text>Prescription</Text>
+                        <TextArea h={20} key={"prescription"} variant="underlined" value={formData.prescription} placeholder="What drugs should be given to the patient?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("prescription", val)} />
+
+                        
                     </Modal.Body>
                     <Modal.Footer>
                         <Button.Group space={2}>
@@ -286,11 +369,15 @@ export default function Admissions({ text }) {
                                 </Button>
                                 :
                                 <>
-                                    <Button width={(deleteLoading == true) ? 120 : 100} isDisabled={saveUpdateLoading || deleteLoading} isLoadingText={"Deleteing ..."} isLoading={deleteLoading} colorScheme="error" onPress={() => {
-                                        deleteAdmission();
-                                    }}>
-                                        Delete
-                                    </Button>
+                                    {userProfile.nurse == true ?
+                                        <Button width={(deleteLoading == true) ? 120 : 100} isDisabled={saveUpdateLoading || deleteLoading} isLoadingText={"Deleteing ..."} isLoading={deleteLoading} colorScheme="error" onPress={() => {
+                                            deleteAdmission();
+                                        }}>
+                                            Delete
+                                        </Button>
+                                        :
+                                        <></>
+                                    }
                                     <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Updating ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
                                         submitForm("update");
                                     }}>

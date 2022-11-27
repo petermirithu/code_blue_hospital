@@ -19,10 +19,15 @@ import { delete_user, register_user, update_user } from "../services/Authenticat
 import Moment from 'moment';
 import { get_doctors } from "../services/DoctorService";
 import { setDoctors } from "../redux/DoctorsSlice";
+import { useAssets } from 'expo-asset';
 
 export default function Doctors({ text }) {
     const toast = useToast();
     const dispatch = useDispatch();
+
+    const [assets] = useAssets([
+        require('../assets/animations/empty.gif'),
+    ]);
 
     const [showModal, setShowModal] = useState(false);
     const formDataTemplate = {
@@ -52,7 +57,7 @@ export default function Doctors({ text }) {
     const { userProfile } = useSelector((state) => state.userProfile);
     const { doctors } = useSelector((state) => state.doctors);
 
-    const tableHead = ['Number', 'Name', 'Email', 'Phone_no', "Status", "Joined On"];
+    const tableHead = ['Number', 'Name', 'Email', 'Phone_no', "Specialization", "Status"];
 
     const handleForm = (option, data) => {
         let currentState = { ...formData }
@@ -90,6 +95,17 @@ export default function Doctors({ text }) {
     }
 
     const selectRecord = (rowData) => {
+        if (userProfile.admin != true) {
+            const toastId = "warningPermisisons";
+            if (!toast.isActive(toastId)) {
+                toast.show({
+                    placement: "top",
+                    id: toastId,
+                    render: () => <Toaster title={"Restricted!"} description={"You don't have permission to access more information"} status="warning" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                })
+            }
+            return
+        }
         setModalState("update");
         const selected = doctors[rowData[0] - 1]
         setStatusRadio(selected?.status);
@@ -239,7 +255,7 @@ export default function Doctors({ text }) {
         let counter = 1;
         let tableData_ = []
         for (let person of newData) {
-            let payload = [counter, person?.name, person?.email, person?.phone_no, person?.status, Moment(person?.created_at).format("dddd, MMMM Do YYYY, h:mm:ss a")];
+            let payload = [counter, person?.name, person?.email, person?.phone_no, person?.specialization, person?.status];
             tableData_.push(payload);
             counter++;
         }
@@ -257,7 +273,7 @@ export default function Doctors({ text }) {
     }, [showModal, formData, statusRadio, genderRadio, modalState,
         saveUpdateLoading, pageLoading, tableData, deleteLoading, specializationSelected])
 
-    if (pageLoading == null || pageLoading == true) {
+    if (pageLoading == null || pageLoading == true || !assets) {
         return (
             <View alignItems="center" justifyContent="center" flex="1" background="#f8f9fa">
                 <Loader text={"Loading cards ..."}></Loader>
@@ -278,15 +294,21 @@ export default function Doctors({ text }) {
             <Table style={styles.table}>
                 <Row data={tableHead} style={styles.tableData} textStyle={styles.headerText} />
                 {
-                    tableData.map((rowData, index) => (
-                        <TouchableOpacity onPress={() => selectRecord(rowData)}>
-                            <Row
-                                key={index}
-                                data={rowData}
-                                style={[styles.row, index % 2 && { backgroundColor: '#edf2f4' }]}
-                            />
-                        </TouchableOpacity>
-                    ))
+                    (tableData?.length > 0) ?
+                        tableData.map((rowData, index) => (
+                            <TouchableOpacity onPress={() => selectRecord(rowData)}>
+                                <Row
+                                    key={index}
+                                    data={rowData}
+                                    style={[styles.row, index % 2 && { backgroundColor: '#edf2f4' }]}
+                                />
+                            </TouchableOpacity>
+                        ))
+                        :
+                        <View alignItems={"center"}>
+                            <Image source={assets[0]} width={200} height={200}></Image>
+                            <Text>No record for you</Text>
+                        </View>
                 }
             </Table>
 

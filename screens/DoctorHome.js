@@ -16,16 +16,16 @@ import { FontAwesome } from '@expo/vector-icons';
 import { useSelector } from "react-redux";
 import { Fontisto } from '@expo/vector-icons';
 import Dashboard from "../components/Dashboard";
-import Doctors from "../components/Doctors";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { navigateReset } from "../services/RootNavigation";
 import { Badge } from 'native-base';
 import Patients from "../components/Patients";
 import Admissions from "../components/Admissions";
+import Nurses from "../components/Nurses";
 import Pharmacists from "../components/Pharmacists";
 import { AntDesign } from '@expo/vector-icons';
 
-export default function NurseHome({ navigation }) {
+export default function DoctorHome({ navigation }) {
 
     const [assets] = useAssets([
         require('../assets/logo.png'),
@@ -72,15 +72,15 @@ export default function NurseHome({ navigation }) {
                     <TouchableOpacity onPress={() => setSection("admissions")}>
                         <HStack space={3} marginTop={3} marginBottom={3}>
                             <FontAwesome name="book" size={24} color="#c5d5ee" />
-                            <Text style={styles.link}>Admissions</Text>
-                        </HStack>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setSection("doctors")}>
-                        <HStack space={3} marginTop={3} marginBottom={3}>
-                            <Fontisto name="doctor" size={24} color="#c5d5ee" />
-                            <Text style={styles.link}>Doctors</Text>
+                            <Text style={styles.link}>Medical Records</Text>
                         </HStack>
                     </TouchableOpacity>                    
+                    <TouchableOpacity onPress={() => setSection("nurses")}>
+                        <HStack space={3} marginTop={3} marginBottom={3}>
+                            <Fontisto name="nurse" size={24} color="#c5d5ee" />
+                            <Text style={styles.link}>Nurses</Text>
+                        </HStack>
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => setSection("pharmacists")}>
                         <HStack space={3} marginTop={3} marginBottom={3}>
                             <AntDesign name="medicinebox" size={24} color="#c5d5ee" />
@@ -94,7 +94,7 @@ export default function NurseHome({ navigation }) {
                 <HStack px="3" py="3" style={styles.navbar}>
                     <HStack alignItems="center"></HStack>
                     <HStack>
-                        <Badge colorScheme="indigo" variant={"solid"} marginRight={5}>Nurse</Badge>
+                        <Badge colorScheme="amber" variant={"solid"} marginRight={5}>Doctor</Badge>
                         <Box alignItems="flex-start">
                             <HStack space={3} marginRight={5}>
                                 <FontAwesome name="user" size={24} color="black" />
@@ -110,8 +110,8 @@ export default function NurseHome({ navigation }) {
                         :
                         <></>
                     }
-                    {section == "doctors" ?
-                        <Doctors></Doctors>
+                    {section == "nurses" ?
+                        <Nurses></Nurses>
                         :
                         <></>
                     }
@@ -129,8 +129,7 @@ export default function NurseHome({ navigation }) {
                         <Pharmacists></Pharmacists>
                         :
                         <></>
-                    }
-
+                    }                   
                 </View>
             </View>
         </Flex>

@@ -19,10 +19,17 @@ import { delete_user, register_user, update_user } from "../services/Authenticat
 import Moment from 'moment';
 import { get_nurses } from "../services/NurseService";
 import { setNurses } from "../redux/NursesSlice";
+import { useAssets } from 'expo-asset';
+
 
 export default function Nurses({ text }) {
     const toast = useToast();
     const dispatch = useDispatch();
+
+
+    const [assets] = useAssets([
+        require('../assets/animations/empty.gif'),
+    ]);
 
     const [showModal, setShowModal] = useState(false);
     const formDataTemplate = {
@@ -52,7 +59,7 @@ export default function Nurses({ text }) {
     const { userProfile } = useSelector((state) => state.userProfile);
     const { nurses } = useSelector((state) => state.nurses);
 
-    const tableHead = ['Number', 'Name', 'Email', 'Phone_no', "Status", "Joined On"];
+    const tableHead = ['Number', 'Name', 'Email', 'Phone_no', "Specialization", "Status",];
 
     const handleForm = (option, data) => {
         let currentState = { ...formData }
@@ -76,7 +83,7 @@ export default function Nurses({ text }) {
         }
         else if (option == "fee") {
             currentState.fee = data;
-        }        
+        }
         setFormData(currentState);
     }
 
@@ -90,6 +97,17 @@ export default function Nurses({ text }) {
     }
 
     const selectRecord = (rowData) => {
+        if (userProfile.admin != true) {
+            const toastId = "warningPermisisons";
+            if (!toast.isActive(toastId)) {
+                toast.show({
+                    placement: "top",
+                    id: toastId,
+                    render: () => <Toaster title={"Restricted!"} description={"You don't have permission to access more information"} status="warning" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                })
+            }
+            return
+        }
         setModalState("update");
         const selected = nurses[rowData[0] - 1]
         setStatusRadio(selected?.status);
@@ -100,7 +118,7 @@ export default function Nurses({ text }) {
             email: selected?.email,
             phone_no: selected?.phone_no,
             date_of_birth: selected?.date_of_birth,
-            id: selected?.id,            
+            id: selected?.id,
             fee: selected.fee,
         })
         setShowModal(true);
@@ -239,7 +257,7 @@ export default function Nurses({ text }) {
         let counter = 1;
         let tableData_ = []
         for (let person of newData) {
-            let payload = [counter, person?.name, person?.email, person?.phone_no, person?.status, Moment(person?.created_at).format("dddd, MMMM Do YYYY, h:mm:ss a")];
+            let payload = [counter, person?.name, person?.email, person?.phone_no, person?.specialization, person?.status];
             tableData_.push(payload);
             counter++;
         }
@@ -257,7 +275,7 @@ export default function Nurses({ text }) {
     }, [showModal, formData, statusRadio, genderRadio, modalState,
         saveUpdateLoading, pageLoading, tableData, deleteLoading, specializationSelected])
 
-    if (pageLoading == null || pageLoading == true) {
+    if (pageLoading == null || pageLoading == true || !assets) {
         return (
             <View alignItems="center" justifyContent="center" flex="1" background="#f8f9fa">
                 <Loader text={"Loading cards ..."}></Loader>
@@ -268,20 +286,30 @@ export default function Nurses({ text }) {
     return (
         <>
             <Text style={styles.title}>Nurses</Text>
-            <Button style={styles.add} width={100} onPress={() => addNurse()}>Add</Button>
+            {userProfile?.admin == true ?
+                <Button style={styles.add} width={100} onPress={() => addNurse()}>Add</Button>
+                :
+                <></>
+            }
 
             <Table style={styles.table}>
                 <Row data={tableHead} style={styles.tableData} textStyle={styles.headerText} />
                 {
-                    tableData.map((rowData, index) => (
-                        <TouchableOpacity onPress={() => selectRecord(rowData)}>
-                            <Row
-                                key={index}
-                                data={rowData}
-                                style={[styles.row, index % 2 && { backgroundColor: '#edf2f4' }]}
-                            />
-                        </TouchableOpacity>
-                    ))
+                    (tableData?.length > 0) ?
+                        tableData.map((rowData, index) => (
+                            <TouchableOpacity onPress={() => selectRecord(rowData)}>
+                                <Row
+                                    key={index}
+                                    data={rowData}
+                                    style={[styles.row, index % 2 && { backgroundColor: '#edf2f4' }]}
+                                />
+                            </TouchableOpacity>
+                        ))
+                        :
+                        <View alignItems={"center"}>
+                            <Image source={assets[0]} width={200} height={200}></Image>
+                            <Text>No record for you</Text>
+                        </View>
                 }
             </Table>
 
@@ -291,7 +319,14 @@ export default function Nurses({ text }) {
                     {modalState == "add" ?
                         <Modal.Header>Add a Nurse</Modal.Header>
                         :
-                        <Modal.Header>Update a Nurse</Modal.Header>
+                        <>
+                            {userProfile?.admin == true ?
+                                <Modal.Header>Update a Nurse</Modal.Header>
+                                :
+                                <Modal.Header>View a Nurse</Modal.Header>
+                            }
+                        </>
+
                     }
                     <Modal.Body padding={5}>
                         {modalState == "add" ?
@@ -354,7 +389,7 @@ export default function Nurses({ text }) {
                                 <Input key={"fee"} type="text" variant="underlined" value={formData.fee} placeholder="How much should they charge?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("fee", val)} />
                             </View>
                         </HStack>
-                        <HStack space={3}>                            
+                        <HStack space={3}>
                             <View width={260}>
                                 <Text>Specialization</Text>
                                 <Select variant="underlined" selectedValue={specializationSelected} width={"100%"} placeholder="Choose a specialization" mt={1} onValueChange={val => setSpecializationSelected(val)}>
@@ -383,25 +418,31 @@ export default function Nurses({ text }) {
                                 Cancel
                             </Button>
 
-                            {modalState == "add" ?
-                                <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Saving ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
-                                    submitForm("save");
-                                }}>
-                                    Save
-                                </Button>
-                                :
+                            {userProfile?.admin == true ?
                                 <>
-                                    <Button width={(deleteLoading == true) ? 120 : 100} isDisabled={saveUpdateLoading || deleteLoading} isLoadingText={"Deleteing ..."} isLoading={deleteLoading} colorScheme="error" onPress={() => {
-                                        deleteNurse();
-                                    }}>
-                                        Delete
-                                    </Button>
-                                    <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Updating ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
-                                        submitForm("update");
-                                    }}>
-                                        Update
-                                    </Button>
+                                    {modalState == "add" ?
+                                        <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Saving ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
+                                            submitForm("save");
+                                        }}>
+                                            Save
+                                        </Button>
+                                        :
+                                        <>
+                                            <Button width={(deleteLoading == true) ? 120 : 100} isDisabled={saveUpdateLoading || deleteLoading} isLoadingText={"Deleteing ..."} isLoading={deleteLoading} colorScheme="error" onPress={() => {
+                                                deleteNurse();
+                                            }}>
+                                                Delete
+                                            </Button>
+                                            <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Updating ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
+                                                submitForm("update");
+                                            }}>
+                                                Update
+                                            </Button>
+                                        </>
+                                    }
                                 </>
+                                :
+                                <></>
                             }
                         </Button.Group>
                     </Modal.Footer>

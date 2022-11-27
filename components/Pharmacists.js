@@ -11,21 +11,26 @@ import {
 import { useEffect, useState } from "react";
 import Loader from "./Loader";
 import { StyleSheet, TouchableOpacity } from 'react-native';
-import { Table, Row} from 'react-native-table-component';
+import { Table, Row } from 'react-native-table-component';
 import { useSelector, useDispatch } from "react-redux";
 import Toaster from "./Toaster";
 import { delete_user, register_user, update_user } from "../services/Authentication";
 import Moment from 'moment';
 import { get_pharmacists } from "../services/PharmacistService";
 import { setPharmacists } from "../redux/PharmacistsSlice";
+import { useAssets } from 'expo-asset';
 
 export default function Pharmacists({ text }) {
     const toast = useToast();
     const dispatch = useDispatch();
 
+    const [assets] = useAssets([
+        require('../assets/animations/empty.gif'),
+    ]);
+
     const [showModal, setShowModal] = useState(false);
 
-    const formDataTemplate={
+    const formDataTemplate = {
         username: "", password: "", name: "", email: "",
         phone_no: "", date_of_birth: "", id: ""
     }
@@ -44,7 +49,7 @@ export default function Pharmacists({ text }) {
     const { userProfile } = useSelector((state) => state.userProfile);
     const { pharmacists } = useSelector((state) => state.pharmacists);
 
-    const tableHead = ['Number', 'Name', 'Email', 'Phone_no', "Status", "Joined On"];
+    const tableHead = ['Number', 'Name', 'Email', 'Phone_no', "Gender", "Status"];
 
     const handleForm = (option, data) => {
         let currentState = { ...formData }
@@ -78,6 +83,17 @@ export default function Pharmacists({ text }) {
     }
 
     const selectRecord = (rowData) => {
+        if (userProfile.admin != true) {
+            const toastId = "warningPermisisons";
+            if (!toast.isActive(toastId)) {
+                toast.show({
+                    placement: "top",
+                    id: toastId,
+                    render: () => <Toaster title={"Restricted!"} description={"You don't have permission to access more information"} status="warning" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                })
+            }
+            return
+        }
         setModalState("update");
         const selected = pharmacists[rowData[0] - 1]
         setStatusRadio(selected?.status);
@@ -211,7 +227,7 @@ export default function Pharmacists({ text }) {
                 })
             }
             setDeleteLoading(false);
-            setSaveUpdateLoading(false);            
+            setSaveUpdateLoading(false);
             setShowModal(false);
         })
     }
@@ -220,7 +236,7 @@ export default function Pharmacists({ text }) {
         let counter = 1;
         let tableData_ = []
         for (let person of newData) {
-            let payload = [counter, person?.name, person?.email, person?.phone_no, person?.status, Moment(person?.created_at).format("dddd, MMMM Do YYYY, h:mm:ss a")];
+            let payload = [counter, person?.name, person?.email, person?.phone_no, person?.gender, person?.status];
             tableData_.push(payload);
             counter++;
         }
@@ -235,9 +251,9 @@ export default function Pharmacists({ text }) {
             formatTableData(pharmacists);
             setPageLoading(false);
         }
-    }, [showModal, formData, statusRadio, genderRadio, modalState, saveUpdateLoading, pageLoading, tableData,deleteLoading])
+    }, [showModal, formData, statusRadio, genderRadio, modalState, saveUpdateLoading, pageLoading, tableData, deleteLoading])
 
-    if (pageLoading==null || pageLoading==true) {
+    if (pageLoading == null || pageLoading == true || !assets) {
         return (
             <View alignItems="center" justifyContent="center" flex="1" background="#f8f9fa">
                 <Loader text={"Loading cards ..."}></Loader>
@@ -248,20 +264,30 @@ export default function Pharmacists({ text }) {
     return (
         <>
             <Text style={styles.title}>Pharmacists</Text>
-            <Button style={styles.add} width={100} onPress={() => addPharmacist()}>Add</Button>
+            {userProfile.admin == true ?
+                <Button style={styles.add} width={100} onPress={() => addPharmacist()}>Add</Button>
+                :
+                <></>
+            }
 
             <Table style={styles.table}>
                 <Row data={tableHead} style={styles.tableData} textStyle={styles.headerText} />
                 {
-                    tableData.map((rowData, index) => (
-                        <TouchableOpacity onPress={() => selectRecord(rowData)}>
-                            <Row
-                                key={index}
-                                data={rowData}
-                                style={[styles.row, index % 2 && { backgroundColor: '#edf2f4' }]}
-                            />
-                        </TouchableOpacity>
-                    ))
+                    (tableData?.length > 0) ?
+                        tableData.map((rowData, index) => (
+                            <TouchableOpacity onPress={() => selectRecord(rowData)}>
+                                <Row
+                                    key={index}
+                                    data={rowData}
+                                    style={[styles.row, index % 2 && { backgroundColor: '#edf2f4' }]}
+                                />
+                            </TouchableOpacity>
+                        ))
+                        :
+                        <View alignItems={"center"}>
+                            <Image source={assets[0]} width={200} height={200}></Image>
+                            <Text>No record for you</Text>
+                        </View>
                 }
             </Table>
 
@@ -271,7 +297,13 @@ export default function Pharmacists({ text }) {
                     {modalState == "add" ?
                         <Modal.Header>Add a Pharmacist</Modal.Header>
                         :
-                        <Modal.Header>Update a Pharmacist</Modal.Header>
+                        <>
+                            {userProfile.admin == true ?
+                                <Modal.Header>Update a Pharmacist</Modal.Header>
+                                :
+                                <Modal.Header>View a Pharmacist</Modal.Header>
+                            }
+                        </>
                     }
                     <Modal.Body padding={5}>
                         {modalState == "add" ?
@@ -338,25 +370,31 @@ export default function Pharmacists({ text }) {
                                 Cancel
                             </Button>
 
-                            {modalState == "add" ?
-                                <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Saving ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
-                                    submitForm("save");
-                                }}>
-                                    Save
-                                </Button>
-                                :
+                            {userProfile.admin == true ?
                                 <>
-                                    <Button width={(deleteLoading==true)?120:100} isDisabled={saveUpdateLoading || deleteLoading} isLoadingText={"Deleteing ..."} isLoading={deleteLoading} colorScheme="error" onPress={() => {
-                                        deletePharmacist();
-                                    }}>
-                                        Delete
-                                    </Button>
-                                    <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Updating ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
-                                        submitForm("update");
-                                    }}>
-                                        Update
-                                    </Button>
+                                    {modalState == "add" ?
+                                        <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Saving ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
+                                            submitForm("save");
+                                        }}>
+                                            Save
+                                        </Button>
+                                        :
+                                        <>
+                                            <Button width={(deleteLoading == true) ? 120 : 100} isDisabled={saveUpdateLoading || deleteLoading} isLoadingText={"Deleteing ..."} isLoading={deleteLoading} colorScheme="error" onPress={() => {
+                                                deletePharmacist();
+                                            }}>
+                                                Delete
+                                            </Button>
+                                            <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Updating ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
+                                                submitForm("update");
+                                            }}>
+                                                Update
+                                            </Button>
+                                        </>
+                                    }
                                 </>
+                                :
+                                <></>
                             }
                         </Button.Group>
                     </Modal.Footer>
