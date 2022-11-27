@@ -17,6 +17,7 @@ import { useSelector } from "react-redux";
 import { AntDesign } from '@expo/vector-icons';
 import { Fontisto } from '@expo/vector-icons';
 import Dashboard from "../components/Dashboard";
+import Pharmacists from "../components/Pharmacists";
 
 
 export default function AdminHome({ navigation }) {
@@ -29,7 +30,7 @@ export default function AdminHome({ navigation }) {
     const [section, setSection] = useState("dashboard");
 
     useEffect(() => {
-
+                
     }, [section])
 
     if (!assets) {
@@ -88,6 +89,11 @@ export default function AdminHome({ navigation }) {
                 <View paddingTop={5} paddingLeft={5}>
                     {section == "dashboard" ?
                         <Dashboard></Dashboard>
+                        :
+                        <></>
+                    }
+                     {section == "pharmacists" ?
+                        <Pharmacists></Pharmacists>
                         :
                         <></>
                     }

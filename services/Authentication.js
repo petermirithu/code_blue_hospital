@@ -1,19 +1,7 @@
 import { backendBaseUrl} from "./GlobalConfig";
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Axios from "../configurations/Interceptor";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-/**
- * Helper functions
- */
-export const validateEmail = (text) => {        
-    let reg = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w\w+)+$/;
-    if (reg.test(text) === false) {                        
-        return false;
-    }
-    else {                        
-        return true;
-    }
-} 
 
 /**
  * Auth Token Section 
@@ -34,6 +22,19 @@ export const clearCacheItem = async (name) => {
 /**
  * ********************************************* Server Requests ********************************************* 
  */
-export const loginUser = (payload) => {      
+export const login_user = (payload) => {      
     return Axios.post(backendBaseUrl + "/login_user", payload)
 }
+
+export const register_user = (payload) => {      
+    return Axios.post(backendBaseUrl + "/register_user", payload)
+}
+
+export const update_user = (payload) => {      
+    return Axios.post(backendBaseUrl + "/update_user", payload)
+}
+
+export const delete_user = (user_type,user_id) => {      
+    return Axios.delete(backendBaseUrl + "/delete_user/"+user_type+"/"+user_id)
+}
+

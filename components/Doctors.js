@@ -17,9 +17,9 @@ import Toaster from "./Toaster";
 import { delete_user, register_user, update_user } from "../services/Authentication";
 import Moment from 'moment';
 import { get_pharmacists } from "../services/PharmacistService";
-import { setPharmacists } from "../redux/PharmacistsSlice";
+import { setPharmacists } from "../redux/DoctorsSlice";
 
-export default function Pharmacists({ text }) {
+export default function Doctors({ text }) {
     const toast = useToast();
     const dispatch = useDispatch();
 
@@ -39,7 +39,7 @@ export default function Pharmacists({ text }) {
     const [tableData, setTableData] = useState([]);
 
     const { userProfile } = useSelector((state) => state.userProfile);
-    const { pharmacists } = useSelector((state) => state.pharmacists);
+    const { doctors } = useSelector((state) => state.doctors);
 
     const tableHead = ['Number', 'Name', 'Email', 'Phone_no', "Status", "Joined On"];
 

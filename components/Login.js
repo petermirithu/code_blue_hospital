@@ -11,7 +11,7 @@ import {
     HStack
 } from "native-base";
 import { StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
-import { loginUser, storeAuthToken} from "../services/Authentication";
+import { login_user, storeAuthToken} from "../services/Authentication";
 import { navigateReset } from "../services/RootNavigation";
 import { useDispatch } from "react-redux";
 import { setUserProfile } from "../redux/UserProfileSlice";
@@ -54,7 +54,7 @@ export default function Login({ source }) {
         }
     }
 
-    const submitLoginDetails = () => {
+    const submitLoginDetails = async () => {
         if (formData.username.length < 3) {
             const toastId = "invalidUsername";
             if (!toast.isActive(toastId)) {
@@ -77,7 +77,7 @@ export default function Login({ source }) {
         }
         else {
             setIsRequesting(true);
-            loginUser(formData).then(async result => {
+            await login_user(formData).then(async result => {
                 storeAuthToken(result?.data?.token)
                 delete result.data.token;
                 routeUser(result?.data);                
