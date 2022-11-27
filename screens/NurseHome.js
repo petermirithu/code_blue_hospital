@@ -14,17 +14,16 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { FontAwesome } from '@expo/vector-icons';
 import { useSelector } from "react-redux";
-import { AntDesign } from '@expo/vector-icons';
 import { Fontisto } from '@expo/vector-icons';
 import Dashboard from "../components/Dashboard";
-import Pharmacists from "../components/Pharmacists";
 import Doctors from "../components/Doctors";
-import Nurses from "../components/Nurses";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { navigateReset } from "../services/RootNavigation";
 import { Badge } from 'native-base';
+import Patients from "../components/Patients";
+import Admissions from "../components/Admissions";
 
-export default function AdminHome({ navigation }) {
+export default function NurseHome({ navigation }) {
 
     const [assets] = useAssets([
         require('../assets/logo.png'),
@@ -33,9 +32,9 @@ export default function AdminHome({ navigation }) {
     const { userProfile } = useSelector((state) => state.userProfile);
     const [section, setSection] = useState("dashboard");
 
-    const signOut = async () => {        
+    const signOut = async () => {
         const keys = await AsyncStorage.getAllKeys()
-        await AsyncStorage.multiRemove(keys)   
+        await AsyncStorage.multiRemove(keys)
         navigateReset("Authorise");
     }
 
@@ -62,32 +61,32 @@ export default function AdminHome({ navigation }) {
                             <Text style={styles.link}>Dashboard</Text>
                         </HStack>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setSection("pharmacists")}>
-                        <HStack space={3} marginTop={3} marginBottom={3}>
-                            <AntDesign name="medicinebox" size={24} color="#c5d5ee" />
-                            <Text style={styles.link}>Pharmacists</Text>
-                        </HStack>
-                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => setSection("doctors")}>
                         <HStack space={3} marginTop={3} marginBottom={3}>
                             <Fontisto name="doctor" size={24} color="#c5d5ee" />
                             <Text style={styles.link}>Doctors</Text>
                         </HStack>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setSection("nurses")}>
+                    <TouchableOpacity onPress={() => setSection("patients")}>
                         <HStack space={3} marginTop={3} marginBottom={3}>
-                            <Fontisto name="nurse" size={24} color="#c5d5ee" />
-                            <Text style={styles.link}>Nurses</Text>
+                            <Fontisto name="bed-patient" size={24} color="#c5d5ee" />
+                            <Text style={styles.link}>Patients</Text>
+                        </HStack>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setSection("admissions")}>
+                        <HStack space={3} marginTop={3} marginBottom={3}>
+                            <FontAwesome name="book" size={24} color="#c5d5ee" />
+                            <Text style={styles.link}>Admissions</Text>
                         </HStack>
                     </TouchableOpacity>
                 </View>
-                <Button onPress={()=>signOut()} colorScheme={"error"} position={"absolute"} bottom={5} left={16} width={120}>Sign Out</Button>
+                <Button onPress={() => signOut()} colorScheme={"error"} position={"absolute"} bottom={5} left={16} width={120}>Sign Out</Button>
             </View>
             <View width={"80%"} background={"#e9ecef"}>
                 <HStack px="3" py="3" style={styles.navbar}>
                     <HStack alignItems="center"></HStack>
                     <HStack>
-                        <Badge colorScheme="info" variant={"solid"} marginRight={5}>Admin</Badge>
+                        <Badge colorScheme="indigo" variant={"solid"} marginRight={5}>Nurse</Badge>
                         <Box alignItems="flex-start">
                             <HStack space={3} marginRight={5}>
                                 <FontAwesome name="user" size={24} color="black" />
@@ -103,21 +102,22 @@ export default function AdminHome({ navigation }) {
                         :
                         <></>
                     }
-                    {section == "pharmacists" ?
-                        <Pharmacists></Pharmacists>
-                        :
-                        <></>
-                    }
                     {section == "doctors" ?
                         <Doctors></Doctors>
                         :
                         <></>
                     }
-                    {section == "nurses" ?
-                        <Nurses></Nurses>
+                    {section == "patients" ?
+                        <Patients></Patients>
                         :
                         <></>
                     }
+                    {section == "admissions" ?
+                        <Admissions></Admissions>
+                        :
+                        <></>
+                    }
+
                 </View>
             </View>
         </Flex>

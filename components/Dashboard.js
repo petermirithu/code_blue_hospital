@@ -21,6 +21,8 @@ import { setNurses } from "../redux/NursesSlice";
 import { get_pharmacists } from "../services/PharmacistService";
 import { setPharmacists } from "../redux/PharmacistsSlice";
 import { get_revenue } from "../services/PaymentService";
+import { get_admissions } from "../services/AdmissionsService";
+import { setAdmisisons } from "../redux/AdmissionsSlice";
 
 export default function Dashboard({ text }) {
     const toast = useToast();
@@ -31,7 +33,8 @@ export default function Dashboard({ text }) {
         require("../assets/animations/pharmacist.gif"),
         require("../assets/animations/doctors.gif"),
         require("../assets/animations/nurse.gif"),
-        require("../assets/animations/revenue.gif")
+        require("../assets/animations/revenue.gif"),
+        require("../assets/animations/admission.gif"),
     ]);
 
     const [loaded, setLoaded] = useState(null);
@@ -41,6 +44,8 @@ export default function Dashboard({ text }) {
     const { doctors } = useSelector((state) => state.doctors);
     const { pharmacists } = useSelector((state) => state.pharmacists);
     const { nurses } = useSelector((state) => state.nurses);
+    const { userProfile } = useSelector((state) => state.userProfile);
+    const { admissions } = useSelector((state) => state.admissions);
 
 
     const loadData= async () => {
@@ -92,18 +97,32 @@ export default function Dashboard({ text }) {
                 })
             }                        
         });
-        await get_revenue().then(response=>{            
-            setRevenue(response.data)
-        }).catch(error=>{
-            const toastId = "errorLoadingRevenue";
+        await get_admissions().then(response => {
+            dispatch(setAdmisisons(response.data));            
+        }).catch(error => {
+            const toastId = "errorLoading";
             if (!toast.isActive(toastId)) {
                 toast.show({
                     placement: "top",
                     id: toastId,
-                    render: () => <Toaster title={"Oh Snap! Something went wrong."} description={"An error occured while loading revenue"} status="error" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                    render: () => <Toaster title={"Oh Snap! Something went wrong."} description={"An error occured while loading admissions"} status="error" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
                 })
-            }                        
-        });    
+            }
+        });
+        if(userProfile.admin==true){
+            await get_revenue().then(response=>{            
+                setRevenue(response.data)
+            }).catch(error=>{
+                const toastId = "errorLoadingRevenue";
+                if (!toast.isActive(toastId)) {
+                    toast.show({
+                        placement: "top",
+                        id: toastId,
+                        render: () => <Toaster title={"Oh Snap! Something went wrong."} description={"An error occured while loading revenue"} status="error" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                    })
+                }                        
+            });    
+        }
         setLoaded(true);
     }
 
@@ -111,7 +130,10 @@ export default function Dashboard({ text }) {
         if(loaded==null){
             setLoaded(false);
             loadData();
-        }                
+        }           
+        
+        console.log(admissions);
+        
     }, [loaded, revenue])
 
     if (!assets || (loaded==false || loaded==null)) {
@@ -164,13 +186,22 @@ export default function Dashboard({ text }) {
                             <Text style={styles.number} color={"#38a3a5"}>{nurses?.length}</Text>
                         </Flex>
                     </HStack>
-                </View>
-                <View style={styles.card} marginRight={10}>
+                </View>                
+                <View style={styles.card} marginRight={10} display={(userProfile.admin==true)?"block":"none"}>
                     <HStack space={3}>
                         <Image source={assets[4]} style={styles.image}></Image>
                         <Flex direction="column" marginTop={10}>
                             <Text fontStyle={"italic"}>Revenue Raised</Text>
                             <Text style={styles.number} color={"#ffc300"}>ksh {revenue}</Text>
+                        </Flex>
+                    </HStack>
+                </View>
+                <View style={styles.card} marginRight={10}>
+                    <HStack space={3}>
+                        <Image source={assets[5]} style={styles.image}></Image>
+                        <Flex direction="column" marginTop={10}>
+                            <Text fontStyle={"italic"}>No of Admissions</Text>
+                            <Text style={styles.number} color={"#4cc9f0"}>{admissions?.length}</Text>
                         </Flex>
                     </HStack>
                 </View>

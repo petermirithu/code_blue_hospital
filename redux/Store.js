@@ -1,4 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
+import AdmissionsSlice from "./AdmissionsSlice";
 import DoctorsSlice from "./DoctorsSlice";
 import NursesSlice from "./NursesSlice";
 import PatientsSlice from "./PatientsSlice";
@@ -11,6 +12,7 @@ export default configureStore({
         patients:PatientsSlice,   
         doctors:DoctorsSlice,   
         pharmacists:PharmacistsSlice,  
-        nurses:NursesSlice,       
+        nurses:NursesSlice,     
+        admissions:AdmissionsSlice  
     }
 })

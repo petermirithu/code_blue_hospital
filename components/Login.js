@@ -40,7 +40,7 @@ export default function Login({ source }) {
     }
 
     const routeUser = (userData) => {
-        dispatch(setUserProfile(userData));
+        dispatch(setUserProfile(userData));        
         if (userData?.admin == true) {
             navigateReset("Admin's Home");
         }

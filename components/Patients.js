@@ -6,8 +6,7 @@ import {
     Input,
     Radio,
     HStack,
-    useToast,
-    Select
+    useToast,    
 } from "native-base";
 import { useEffect, useState } from "react";
 import Loader from "./Loader";
@@ -15,54 +14,41 @@ import { StyleSheet, TouchableOpacity } from 'react-native';
 import { Table, Row } from 'react-native-table-component';
 import { useSelector, useDispatch } from "react-redux";
 import Toaster from "./Toaster";
-import { delete_user, register_user, update_user } from "../services/Authentication";
+import { delete_user, update_user } from "../services/Authentication";
 import Moment from 'moment';
-import { get_doctors } from "../services/DoctorService";
-import { setDoctors } from "../redux/DoctorsSlice";
+import { add_patient, get_patients} from "../services/PatientService";
+import { setPatients } from "../redux/PatientsSlice";
 
-export default function Doctors({ text }) {
+export default function Patients({ text }) {
     const toast = useToast();
     const dispatch = useDispatch();
 
     const [showModal, setShowModal] = useState(false);
+
     const formDataTemplate = {
-        id: "",
-        username: "",
-        password: "",
-        name: "",
-        email: "",
+        name: "", email: "",
         phone_no: "",
-        fee: "2500",
-        specialization: "",
-        date_of_birth: "",
+        date_of_birth: "", id: "", weight: "", height: ""        
     }
 
     const [formData, setFormData] = useState(formDataTemplate);
 
-    const [statusRadio, setStatusRadio] = useState("");
-    const [genderRadio, setGenderRadio] = useState("");
-    const [specializationSelected, setSpecializationSelected] = useState("");
+    const [genderRadio, setGenderRadio] = useState("");    
     const [modalState, setModalState] = useState("add");
     const [saveUpdateLoading, setSaveUpdateLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [pageLoading, setPageLoading] = useState(null);
 
+
     const [tableData, setTableData] = useState([]);
 
-    const { userProfile } = useSelector((state) => state.userProfile);
-    const { doctors } = useSelector((state) => state.doctors);
+    const { patients } = useSelector((state) => state.patients);    
 
-    const tableHead = ['Number', 'Name', 'Email', 'Phone_no', "Status", "Joined On"];
+    const tableHead = ['Number', 'Name', 'Email', 'Phone_no', "Gender", "Joined On"];
 
     const handleForm = (option, data) => {
-        let currentState = { ...formData }
-        if (option == "username") {
-            currentState.username = data;
-        }
-        else if (option == "password") {
-            currentState.password = data;
-        }
-        else if (option == "name") {
+        let currentState = { ...formData }        
+        if (option == "name") {
             currentState.name = data;
         }
         else if (option == "email") {
@@ -74,41 +60,41 @@ export default function Doctors({ text }) {
         else if (option == "dob") {
             currentState.date_of_birth = data;
         }
-        else if (option == "fee") {
-            currentState.fee = data;
+        else if (option == "weight") {
+            currentState.weight = data;
         }
+        else if (option == "height") {
+            currentState.height = data;
+        }        
         setFormData(currentState);
     }
 
-    const addDoctor = () => {
+    const addPatient = () => {
         setModalState("add");
         setFormData(formDataTemplate);
-        setGenderRadio("");
-        setStatusRadio("");
-        setSpecializationSelected("");
+        setGenderRadio("");        
         setShowModal(true);
     }
 
     const selectRecord = (rowData) => {
         setModalState("update");
-        const selected = doctors[rowData[0] - 1]
-        setStatusRadio(selected?.status);
-        setGenderRadio(selected?.gender);
-        setSpecializationSelected(selected?.specialization);
+        const selected = patients[rowData[0] - 1]
+        setGenderRadio(selected?.gender);        
         setFormData({
             name: selected?.name,
             email: selected?.email,
             phone_no: selected?.phone_no,
             date_of_birth: selected?.date_of_birth,
-            id: selected?.id,
-            fee: selected.fee,
+            weight: selected?.weight,
+            height: selected?.height,
+            id: selected?.id
         })
         setShowModal(true);
     }
 
-    const fetchDoctors = async () => {
-        await get_doctors().then(response => {
-            dispatch(setDoctors(response.data));
+    const fetchPatients = async () => {
+        await get_patients().then(response => {
+            dispatch(setPatients(response.data));
             formatTableData(response.data);
         }).catch(error => {
             const toastId = "errorLoading";
@@ -116,44 +102,39 @@ export default function Doctors({ text }) {
                 toast.show({
                     placement: "top",
                     id: toastId,
-                    render: () => <Toaster title={"Oh Snap! Something went wrong."} description={"An error occured while loading doctors"} status="error" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                    render: () => <Toaster title={"Oh Snap! Something went wrong."} description={"An error occured while loading patients"} status="error" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
                 })
             }
         });
         setSaveUpdateLoading(false);
         setDeleteLoading(false);
         setFormData(formDataTemplate);
-        setGenderRadio("");
-        setStatusRadio("");
-        setSpecializationSelected("");
+        setGenderRadio("");        
         setShowModal(false);
     }
 
     const submitForm = async (option) => {
         setSaveUpdateLoading(true);
         if (option == "save") {
-            const payload = {
-                administrator_id: userProfile.id,
-                username: formData.username,
-                password: formData.password,
+            const payload = {                
                 name: formData.name,
                 email: formData.email,
                 phone_no: formData.phone_no,
                 gender: genderRadio,
-                status: statusRadio,
                 date_of_birth: formData.date_of_birth,
-                specialization: specializationSelected,
-                fee: formData.fee,
-                user_type: "doctor",
-            }
-            await register_user(payload).then(async response => {
-                await fetchDoctors();
+                weight: formData.weight,
+                height: formData.height,                
+                user_type: "patient"
+            }            
+
+            await add_patient(payload).then(async response => {
+                await fetchPatients();
                 const toastId = "sucess";
                 if (!toast.isActive(toastId)) {
                     toast.show({
                         placement: "top",
                         id: toastId,
-                        render: () => <Toaster title={"Successfully created the doctor's account."} status="success" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                        render: () => <Toaster title={"Successfully created the patient's account."} status="success" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
                     })
                 }
             }).catch(error => {
@@ -175,21 +156,20 @@ export default function Doctors({ text }) {
                 email: formData.email,
                 phone_no: formData.phone_no,
                 gender: genderRadio,
-                status: statusRadio,
                 date_of_birth: formData.date_of_birth,
-                specialization: specializationSelected,
-                fee: formData.fee,
+                weight: formData.weight,
+                height: formData.height,                  
                 id: formData.id,
-                user_type: "doctor",
+                user_type: "patient",
             }
             await update_user(payload).then(async response => {
-                await fetchDoctors();
+                await fetchPatients();
                 const toastId = "sucess";
                 if (!toast.isActive(toastId)) {
                     toast.show({
                         placement: "top",
                         id: toastId,
-                        render: () => <Toaster title={"Successfully updated the doctor's account."} status="success" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                        render: () => <Toaster title={"Successfully updated the patient's account."} status="success" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
                     })
                 }
             }).catch(error => {
@@ -208,10 +188,10 @@ export default function Doctors({ text }) {
     }
 
 
-    const deleteDoctor = async () => {
+    const deletePatient = async () => {
         setDeleteLoading(true);
-        await delete_user("doctor", formData.id).then(async response => {
-            await fetchDoctors();
+        await delete_user("patient", formData.id).then(async response => {
+            await fetchPatients();
             const toastId = "success";
             if (!toast.isActive(toastId)) {
                 toast.show({
@@ -239,7 +219,7 @@ export default function Doctors({ text }) {
         let counter = 1;
         let tableData_ = []
         for (let person of newData) {
-            let payload = [counter, person?.name, person?.email, person?.phone_no, person?.status, Moment(person?.created_at).format("dddd, MMMM Do YYYY, h:mm:ss a")];
+            let payload = [counter, person?.name, person?.email, person?.phone_no, person?.gender, Moment(person?.created_at).format("dddd, MMMM Do YYYY, h:mm:ss a")];
             tableData_.push(payload);
             counter++;
         }
@@ -251,11 +231,10 @@ export default function Doctors({ text }) {
     useEffect(() => {
         if (pageLoading == null) {
             setPageLoading(true);
-            formatTableData(doctors);
+            formatTableData(patients);
             setPageLoading(false);
         }
-    }, [showModal, formData, statusRadio, genderRadio, modalState,
-        saveUpdateLoading, pageLoading, tableData, deleteLoading, specializationSelected])
+    }, [showModal, formData, genderRadio, modalState, saveUpdateLoading, pageLoading, tableData, deleteLoading])
 
     if (pageLoading == null || pageLoading == true) {
         return (
@@ -267,13 +246,8 @@ export default function Doctors({ text }) {
 
     return (
         <>
-            <Text style={styles.title}>Doctors</Text>
-
-            {(userProfile.admin == true) ?
-                <Button style={styles.add} width={100} onPress={() => addDoctor()}>Add</Button>
-                :
-                <></>
-            }
+            <Text style={styles.title}>Patients</Text>
+            <Button style={styles.add} width={100} onPress={() => addPatient()}>Add</Button>
 
             <Table style={styles.table}>
                 <Row data={tableHead} style={styles.tableData} textStyle={styles.headerText} />
@@ -294,31 +268,11 @@ export default function Doctors({ text }) {
                 <Modal.Content>
                     <Modal.CloseButton />
                     {modalState == "add" ?
-                        <Modal.Header>Add a Doctor</Modal.Header>
+                        <Modal.Header>Add a Patient</Modal.Header>
                         :
-                        <>
-                            {(userProfile?.admin == true) ?
-                                <Modal.Header>Update a Doctor</Modal.Header>
-                                :
-                                <Modal.Header>View a Doctor</Modal.Header>
-                            }
-                        </>
+                        <Modal.Header>Update a Patient</Modal.Header>
                     }
                     <Modal.Body padding={5}>
-                        {modalState == "add" ?
-                            <HStack space={3} marginBottom={5}>
-                                <View width={260}>
-                                    <Text>Username</Text>
-                                    <Input key={"username"} variant="underlined" value={formData.username} placeholder="Create a username for login" w={"100%"} onChangeText={(val) => handleForm("username", val)} />
-                                </View>
-                                <View width={260}>
-                                    <Text>Password</Text>
-                                    <Input key={"password"} variant="underlined" value={formData.password} placeholder="Create a password for login" w={"100%"} onChangeText={(val) => handleForm("password", val)} />
-                                </View>
-                            </HStack>
-                            :
-                            <></>
-                        }
                         <Text>Name</Text>
                         <Input key={"name"} variant="underlined" value={formData.name} placeholder="Enter their full name" w="100%" marginBottom={5} onChangeText={(val) => handleForm("name", val)} />
                         <Text>Email</Text>
@@ -343,48 +297,19 @@ export default function Doctors({ text }) {
                                     </HStack>
                                 </Radio.Group>
                             </View>
-                        </HStack>
+                        </HStack>                        
                         <HStack space={3}>
                             <View width={260}>
-                                <Text>Status</Text>
-                                <Radio.Group name="status" key={"status"} value={statusRadio} onChange={val => {
-                                    setStatusRadio(val);
-                                }} marginBottom={5}>
-                                    <HStack space={3}>
-                                        <Radio value="Permanent">
-                                            Permanent
-                                        </Radio>
-                                        <Radio value="Internship">
-                                            Internship
-                                        </Radio>
-                                    </HStack>
-                                </Radio.Group>
+                                <Text>Weight in kg</Text>
+                                <Input key={"weight"} variant="underlined" value={formData.weight} placeholder="What their weight?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("weight", val)} />
                             </View>
                             <View width={260}>
-                                <Text>Fee to Charge in Ksh</Text>
-                                <Input key={"fee"} type="text" variant="underlined" value={formData.fee} placeholder="How much should they charge?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("fee", val)} />
+                                <Text>Height in cm</Text>
+                                <Input key={"height"} variant="underlined" value={formData.height} placeholder="What their height?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("height", val)} />
                             </View>
-                        </HStack>
-                        <HStack space={3}>
-                            <View width={260}>
-                                <Text>Specialization</Text>
-                                <Select variant="underlined" selectedValue={specializationSelected} width={"100%"} placeholder="Choose a specialization" mt={1} onValueChange={val => setSpecializationSelected(val)}>
-                                    <Select.Item label="Anesthesiology " value="Anesthesiology" />
-                                    <Select.Item label="Pediatrics" value="Pediatrics" />
-                                    <Select.Item label="Ophthalmology" value="Ophthalmology" />
-                                    <Select.Item label="Otolaryngology" value="Otolaryngology" />
-                                    <Select.Item label="Dermatology" value="Dermatology" />
-                                    <Select.Item label="Psychiatry" value="Psychiatry" />
-                                    <Select.Item label="Clinical Immunology/Allergy" value="Clinical Immunology/Allergy" />
-                                </Select>
-                            </View>
-                            <View width={260}>
-                                <Text>Date of Birth</Text>
-                                <Input key={"dob"} variant="underlined" value={formData.date_of_birth} placeholder="When were they born?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("dob", val)} />
-                            </View>
-                        </HStack>
-
-
+                        </HStack> 
+                        <Text>Date of Birth</Text>
+                        <Input key={"dob"} variant="underlined" value={formData.date_of_birth} placeholder="When were they born?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("dob", val)} />                                                                                             
                     </Modal.Body>
                     <Modal.Footer>
                         <Button.Group space={2}>
@@ -394,31 +319,25 @@ export default function Doctors({ text }) {
                                 Cancel
                             </Button>
 
-                            {(userProfile.admin == true) ?
-                                <>
-                                    {modalState == "add" ?
-                                        <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Saving ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
-                                            submitForm("save");
-                                        }}>
-                                            Save
-                                        </Button>
-                                        :
-                                        <>
-                                            <Button width={(deleteLoading == true) ? 120 : 100} isDisabled={saveUpdateLoading || deleteLoading} isLoadingText={"Deleteing ..."} isLoading={deleteLoading} colorScheme="error" onPress={() => {
-                                                deleteDoctor();
-                                            }}>
-                                                Delete
-                                            </Button>
-                                            <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Updating ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
-                                                submitForm("update");
-                                            }}>
-                                                Update
-                                            </Button>
-                                        </>
-                                    }
-                                </>
+                            {modalState == "add" ?
+                                <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Saving ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
+                                    submitForm("save");
+                                }}>
+                                    Save
+                                </Button>
                                 :
-                                <></>
+                                <>
+                                    <Button width={(deleteLoading == true) ? 120 : 100} isDisabled={saveUpdateLoading || deleteLoading} isLoadingText={"Deleteing ..."} isLoading={deleteLoading} colorScheme="error" onPress={() => {
+                                        deletePatient();
+                                    }}>
+                                        Delete
+                                    </Button>
+                                    <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Updating ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
+                                        submitForm("update");
+                                    }}>
+                                        Update
+                                    </Button>
+                                </>
                             }
                         </Button.Group>
                     </Modal.Footer>

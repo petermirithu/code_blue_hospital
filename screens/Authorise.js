@@ -11,7 +11,7 @@ export default function Authorise({ navigation }) {
     const [isLoading, setIsLoading] = useState(null);    
 
     const checkIfLoggedIn = async () => {
-        await getCachedUserProfile().then(userData => {                                   
+        await getCachedUserProfile().then(userData => {                                               
             if (userData?.admin == true) {
                 navigateReset("Admin's Home");
             }

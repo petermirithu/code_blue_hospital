@@ -22,10 +22,13 @@ export const navigateHome = async (data) => {
     if (data && data?.admin == true) {
         navigateReset("Admin's Home");
     }
-    else if (data && data?.admin == false) {
-        navigateReset("Investigator's Home");
+    else if (data && data?.nurse == true) {
+        navigateReset("Nurse's Home");
     }
-    else if (data && data?.admin == undefined) {
-        navigateReset("Participant's Home");
+    else if (data && data?.doctor == true) {
+        navigateReset("Doctor's Home");
+    }
+    else if (data && data?.pharmacist == true) {
+        navigateReset("Pharmacist's Home");
     }
 }
