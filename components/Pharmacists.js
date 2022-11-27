@@ -24,10 +24,13 @@ export default function Pharmacists({ text }) {
     const dispatch = useDispatch();
 
     const [showModal, setShowModal] = useState(false);
-    const [formData, setFormData] = useState({
+
+    const formDataTemplate={
         username: "", password: "", name: "", email: "",
         phone_no: "", date_of_birth: "", id: ""
-    });
+    }
+
+    const [formData, setFormData] = useState(formDataTemplate);
 
     const [statusRadio, setStatusRadio] = useState("");
     const [genderRadio, setGenderRadio] = useState("");
@@ -68,7 +71,7 @@ export default function Pharmacists({ text }) {
 
     const addPharmacist = () => {
         setModalState("add");
-        setFormData({ username: "", password: "", name: "", email: "", phone_no: "", date_of_birth: "" });
+        setFormData(formDataTemplate);
         setGenderRadio("");
         setStatusRadio("");
         setShowModal(true);
@@ -94,7 +97,7 @@ export default function Pharmacists({ text }) {
             dispatch(setPharmacists(response.data));
             formatTableData(response.data);
         }).catch(error => {
-            const toastId = "errorLoadingPharmacists";
+            const toastId = "errorLoading";
             if (!toast.isActive(toastId)) {
                 toast.show({
                     placement: "top",
@@ -105,7 +108,7 @@ export default function Pharmacists({ text }) {
         });
         setSaveUpdateLoading(false);
         setDeleteLoading(false);
-        setFormData({ username: "", password: "", name: "", email: "", phone_no: "", date_of_birth: "" });
+        setFormData(formDataTemplate);
         setGenderRadio("");
         setStatusRadio("");
         setShowModal(false);
@@ -294,7 +297,7 @@ export default function Pharmacists({ text }) {
                                 <Text>Phone Number</Text>
                                 <Input key={"phone_no"} variant="underlined" value={formData.phone_no} placeholder="Should be atleast 10 characters" w="100%" onChangeText={(val) => handleForm("phone_no", val)} />
                             </View>
-                            <View>
+                            <View width={260}>
                                 <Text>Gender</Text>
                                 <Radio.Group name="gender" key="gender" value={genderRadio} onChange={val => {
                                     setGenderRadio(val);

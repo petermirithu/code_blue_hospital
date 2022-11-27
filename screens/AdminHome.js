@@ -18,6 +18,8 @@ import { AntDesign } from '@expo/vector-icons';
 import { Fontisto } from '@expo/vector-icons';
 import Dashboard from "../components/Dashboard";
 import Pharmacists from "../components/Pharmacists";
+import Doctors from "../components/Doctors";
+import Nurses from "../components/Nurses";
 
 
 export default function AdminHome({ navigation }) {
@@ -30,7 +32,7 @@ export default function AdminHome({ navigation }) {
     const [section, setSection] = useState("dashboard");
 
     useEffect(() => {
-                
+
     }, [section])
 
     if (!assets) {
@@ -46,25 +48,25 @@ export default function AdminHome({ navigation }) {
             <View background={"#1b263b"} width={"20%"} height={"100%"} position={"relative"}>
                 <Image source={assets[0]} alt="Loader" style={{ width: 150, height: 150 }} />
                 <View paddingLeft={5}>
-                    <TouchableOpacity onPress={()=>setSection("dashboard")}>
+                    <TouchableOpacity onPress={() => setSection("dashboard")}>
                         <HStack space={3} marginTop={3} marginBottom={3}>
                             <MaterialIcons name="dashboard" size={24} color="#c5d5ee" />
                             <Text style={styles.link}>Dashboard</Text>
                         </HStack>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={()=>setSection("pharmacists")}>
+                    <TouchableOpacity onPress={() => setSection("pharmacists")}>
                         <HStack space={3} marginTop={3} marginBottom={3}>
                             <AntDesign name="medicinebox" size={24} color="#c5d5ee" />
                             <Text style={styles.link}>Pharmacists</Text>
                         </HStack>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={()=>setSection("doctors")}>
+                    <TouchableOpacity onPress={() => setSection("doctors")}>
                         <HStack space={3} marginTop={3} marginBottom={3}>
                             <Fontisto name="doctor" size={24} color="#c5d5ee" />
                             <Text style={styles.link}>Doctors</Text>
                         </HStack>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={()=>setSection("nurses")}>
+                    <TouchableOpacity onPress={() => setSection("nurses")}>
                         <HStack space={3} marginTop={3} marginBottom={3}>
                             <Fontisto name="nurse" size={24} color="#c5d5ee" />
                             <Text style={styles.link}>Nurses</Text>
@@ -92,8 +94,18 @@ export default function AdminHome({ navigation }) {
                         :
                         <></>
                     }
-                     {section == "pharmacists" ?
+                    {section == "pharmacists" ?
                         <Pharmacists></Pharmacists>
+                        :
+                        <></>
+                    }
+                    {section == "doctors" ?
+                        <Doctors></Doctors>
+                        :
+                        <></>
+                    }
+                    {section == "nurses" ?
+                        <Nurses></Nurses>
                         :
                         <></>
                     }

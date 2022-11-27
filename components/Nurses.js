@@ -17,10 +17,10 @@ import { useSelector, useDispatch } from "react-redux";
 import Toaster from "./Toaster";
 import { delete_user, register_user, update_user } from "../services/Authentication";
 import Moment from 'moment';
-import { get_doctors } from "../services/DoctorService";
-import { setDoctors } from "../redux/DoctorsSlice";
+import { get_nurses } from "../services/NurseService";
+import { setNurses } from "../redux/NursesSlice";
 
-export default function Doctors({ text }) {
+export default function Nurses({ text }) {
     const toast = useToast();
     const dispatch = useDispatch();
 
@@ -50,7 +50,7 @@ export default function Doctors({ text }) {
     const [tableData, setTableData] = useState([]);
 
     const { userProfile } = useSelector((state) => state.userProfile);
-    const { doctors } = useSelector((state) => state.doctors);
+    const { nurses } = useSelector((state) => state.nurses);
 
     const tableHead = ['Number', 'Name', 'Email', 'Phone_no', "Status", "Joined On"];
 
@@ -80,7 +80,7 @@ export default function Doctors({ text }) {
         setFormData(currentState);
     }
 
-    const addDoctor = () => {
+    const addNurse = () => {
         setModalState("add");
         setFormData(formDataTemplate);
         setGenderRadio("");
@@ -91,7 +91,7 @@ export default function Doctors({ text }) {
 
     const selectRecord = (rowData) => {
         setModalState("update");
-        const selected = doctors[rowData[0] - 1]
+        const selected = nurses[rowData[0] - 1]
         setStatusRadio(selected?.status);
         setGenderRadio(selected?.gender);
         setSpecializationSelected(selected?.specialization);
@@ -106,9 +106,9 @@ export default function Doctors({ text }) {
         setShowModal(true);
     }
 
-    const fetchDoctors = async () => {
-        await get_doctors().then(response => {
-            dispatch(setDoctors(response.data));
+    const fetchNurses = async () => {
+        await get_nurses().then(response => {
+            dispatch(setNurses(response.data));
             formatTableData(response.data);
         }).catch(error => {
             const toastId = "errorLoading";
@@ -116,7 +116,7 @@ export default function Doctors({ text }) {
                 toast.show({
                     placement: "top",
                     id: toastId,
-                    render: () => <Toaster title={"Oh Snap! Something went wrong."} description={"An error occured while loading doctors"} status="error" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                    render: () => <Toaster title={"Oh Snap! Something went wrong."} description={"An error occured while loading nurses"} status="error" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
                 })
             }
         });
@@ -144,16 +144,16 @@ export default function Doctors({ text }) {
                 date_of_birth: formData.date_of_birth,
                 specialization: specializationSelected,
                 fee: formData.fee,
-                user_type: "doctor",
+                user_type: "nurse",
             }
             await register_user(payload).then(async response => {
-                await fetchDoctors();
+                await fetchNurses();
                 const toastId = "sucess";
                 if (!toast.isActive(toastId)) {
                     toast.show({
                         placement: "top",
                         id: toastId,
-                        render: () => <Toaster title={"Successfully created the doctor's account."} status="success" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                        render: () => <Toaster title={"Successfully created the nurse's account."} status="success" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
                     })
                 }
             }).catch(error => {
@@ -180,16 +180,16 @@ export default function Doctors({ text }) {
                 specialization: specializationSelected,
                 fee: formData.fee,
                 id: formData.id,
-                user_type: "doctor",
+                user_type: "nurse",
             }
             await update_user(payload).then(async response => {
-                await fetchDoctors();
+                await fetchNurses();
                 const toastId = "sucess";
                 if (!toast.isActive(toastId)) {
                     toast.show({
                         placement: "top",
                         id: toastId,
-                        render: () => <Toaster title={"Successfully updated the doctor's account."} status="success" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                        render: () => <Toaster title={"Successfully updated the nurse's account."} status="success" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
                     })
                 }
             }).catch(error => {
@@ -208,10 +208,10 @@ export default function Doctors({ text }) {
     }
 
 
-    const deleteDoctor = async () => {
+    const deleteNurse = async () => {
         setDeleteLoading(true);
-        await delete_user("doctor", formData.id).then(async response => {
-            await fetchDoctors();
+        await delete_user("nurse", formData.id).then(async response => {
+            await fetchNurses();
             const toastId = "success";
             if (!toast.isActive(toastId)) {
                 toast.show({
@@ -251,7 +251,7 @@ export default function Doctors({ text }) {
     useEffect(() => {
         if (pageLoading == null) {
             setPageLoading(true);
-            formatTableData(doctors);
+            formatTableData(nurses);
             setPageLoading(false);
         }
     }, [showModal, formData, statusRadio, genderRadio, modalState,
@@ -267,8 +267,8 @@ export default function Doctors({ text }) {
 
     return (
         <>
-            <Text style={styles.title}>Doctors</Text>
-            <Button style={styles.add} width={100} onPress={() => addDoctor()}>Add</Button>
+            <Text style={styles.title}>Nurses</Text>
+            <Button style={styles.add} width={100} onPress={() => addNurse()}>Add</Button>
 
             <Table style={styles.table}>
                 <Row data={tableHead} style={styles.tableData} textStyle={styles.headerText} />
@@ -289,9 +289,9 @@ export default function Doctors({ text }) {
                 <Modal.Content>
                     <Modal.CloseButton />
                     {modalState == "add" ?
-                        <Modal.Header>Add a Doctor</Modal.Header>
+                        <Modal.Header>Add a Nurse</Modal.Header>
                         :
-                        <Modal.Header>Update a Doctor</Modal.Header>
+                        <Modal.Header>Update a Nurse</Modal.Header>
                     }
                     <Modal.Body padding={5}>
                         {modalState == "add" ?
@@ -392,7 +392,7 @@ export default function Doctors({ text }) {
                                 :
                                 <>
                                     <Button width={(deleteLoading == true) ? 120 : 100} isDisabled={saveUpdateLoading || deleteLoading} isLoadingText={"Deleteing ..."} isLoading={deleteLoading} colorScheme="error" onPress={() => {
-                                        deleteDoctor();
+                                        deleteNurse();
                                     }}>
                                         Delete
                                     </Button>
