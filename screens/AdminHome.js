@@ -20,6 +20,8 @@ import Dashboard from "../components/Dashboard";
 import Pharmacists from "../components/Pharmacists";
 import Doctors from "../components/Doctors";
 import Nurses from "../components/Nurses";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { navigateReset } from "../services/RootNavigation";
 
 
 export default function AdminHome({ navigation }) {
@@ -30,6 +32,12 @@ export default function AdminHome({ navigation }) {
 
     const { userProfile } = useSelector((state) => state.userProfile);
     const [section, setSection] = useState("dashboard");
+
+    const signOut = async () => {        
+        const keys = await AsyncStorage.getAllKeys()
+        await AsyncStorage.multiRemove(keys)   
+        navigateReset("Authorise");
+    }
 
     useEffect(() => {
 
@@ -73,7 +81,7 @@ export default function AdminHome({ navigation }) {
                         </HStack>
                     </TouchableOpacity>
                 </View>
-                <Button colorScheme={"error"} position={"absolute"} bottom={5} left={16} width={120}>Sign Out</Button>
+                <Button onPress={()=>signOut()} colorScheme={"error"} position={"absolute"} bottom={5} left={16} width={120}>Sign Out</Button>
             </View>
             <View width={"80%"} background={"#e9ecef"}>
                 <HStack px="3" py="3" style={styles.navbar}>
