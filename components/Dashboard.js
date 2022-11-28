@@ -196,7 +196,7 @@ export default function Dashboard({ text }) {
                         </Flex>
                     </HStack>
                 </View>
-                <View style={styles.card} marginRight={10}>
+                <View style={styles.card} marginRight={10} display={(userProfile.admin!=true)?"block":"none"}>
                     <HStack space={3}>
                         <Image source={assets[5]} style={styles.image}></Image>
                         <Flex direction="column" marginTop={10}>

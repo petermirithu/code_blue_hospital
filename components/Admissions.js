@@ -21,6 +21,7 @@ import Moment from 'moment';
 import { add_admissions, get_admissions, update_admissions, delete_admission } from "../services/AdmissionsService";
 import { setAdmisisons } from "../redux/AdmissionsSlice";
 import { useAssets } from 'expo-asset';
+import { add_payment } from "../services/PaymentService";
 
 export default function Admissions({ text }) {
     const toast = useToast();
@@ -35,9 +36,11 @@ export default function Admissions({ text }) {
     const formDataTemplate = {
         symptoms: "",
         id: "",
-        prescription:"",
-        diagnosis:"",
-        notes:""
+        prescription: "",
+        diagnosis: "",
+        notes: "",
+        fee: 0,
+        drugs: 0,
     }
 
     const [formData, setFormData] = useState(formDataTemplate);
@@ -49,6 +52,8 @@ export default function Admissions({ text }) {
     const [saveUpdateLoading, setSaveUpdateLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [pageLoading, setPageLoading] = useState(null);
+    const [total, setTotal] = useState(0);
+    const [paid, setPaid] = useState(false);
 
 
     const [tableData, setTableData] = useState([]);
@@ -73,8 +78,17 @@ export default function Admissions({ text }) {
         }
         else if (option == "notes") {
             currentState.notes = data;
-        }      
+        }
+        else if (option == "fee") {
+            currentState.fee = data;
+        }
+        else if (option == "drugs") {
+            currentState.drugs = data;
+        }
         setFormData(currentState);
+
+        const cost = parseInt(currentState.fee) + parseInt(currentState.drugs);
+        setTotal(cost);
     }
 
     const admitPatient = () => {
@@ -85,8 +99,47 @@ export default function Admissions({ text }) {
         setShowModal(true);
     }
 
+    const recordPayment = () => {
+        let preForm = { ...formData };
+        preForm.fee = doctors.find(x => x?.id == selectedDoctor)?.fee
+        setTotal(preForm.fee);
+        setFormData(preForm);
+        setModalState("recordPayment");
+    }
+
+    const submitPayment = async () => {
+        setSaveUpdateLoading(true);
+        const payload = {
+            amount_paid: total,
+            pharmacist_id: userProfile?.id,
+            admission_id: formData?.id,
+        }
+        await add_payment(payload).then(async response => {
+            await fetchAdmissions();
+            const toastId = "sucess";
+            if (!toast.isActive(toastId)) {
+                toast.show({
+                    placement: "top",
+                    id: toastId,
+                    render: () => <Toaster title={"Successfully recorded the payment."} status="success" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                })
+            }
+        }).catch(error => {
+            const toastId = "error";
+            if (!toast.isActive(toastId)) {
+                toast.show({
+                    placement: "top",
+                    id: toastId,
+                    render: () => <Toaster title={"Oh Snap! Something went wrong."} description={"An error occured while saving the data"} status="error" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                })
+            }
+            setSaveUpdateLoading(false);
+            setShowModal(false);
+        })
+    }
+
     const selectRecord = (rowData) => {
-        if (userProfile.nurse != true && userProfile.doctor != true) {
+        if (userProfile.nurse != true && userProfile.doctor != true && userProfile?.pharmacist != true) {
             const toastId = "warningPermisisons";
             if (!toast.isActive(toastId)) {
                 toast.show({
@@ -98,15 +151,27 @@ export default function Admissions({ text }) {
             return
         }
         setModalState("update");
-        const selected = admissions[rowData[0] - 1]
+        const selected = admissions?.find(x=>Moment(x?.created_at).format("dddd, MMMM Do YYYY, h:mm:ss a")==rowData[5])        
+        setPaid(selected?.treated);
+        if((userProfile.nurse == true || userProfile.doctor == true) && selected?.treated==true){
+            const toastId = "warningPermisisons";
+            if (!toast.isActive(toastId)) {
+                toast.show({
+                    placement: "top",
+                    id: toastId,
+                    render: () => <Toaster title={"Can't edit this record"} description={"No modifications are allowed after a Patient is treated"} status="warning" id={toastId} closeToast={() => toast.close(toastId)}></Toaster>
+                })
+            }
+            return
+        }
         setSelectedDoctor(selected?.doctor?.id);
-        setSelectedPatient(selected?.patient?.id);
+        setSelectedPatient(selected?.patient?.id);        
         setFormData({
             symptoms: selected?.symptoms,
             id: selected?.id,
-            prescription:selected?.prescription,
-            diagnosis:selected?.diagnosis,
-            notes:selected?.notes,
+            prescription: selected?.prescription||"",
+            diagnosis: selected?.diagnosis||"",
+            notes: selected?.notes||"",
         })
         setShowModal(true);
     }
@@ -170,9 +235,9 @@ export default function Admissions({ text }) {
                 doctor_id: selectedDoctor,
                 patient_id: selectedPatient,
                 symptoms: formData.symptoms,
-                prescription:formData.prescription,
-                diagnosis:formData.diagnosis,
-                notes:formData.notes,
+                prescription: formData.prescription,
+                diagnosis: formData.diagnosis,
+                notes: formData.notes,
                 admission_id: formData.id,
             }
             await update_admissions(payload).then(async response => {
@@ -255,7 +320,7 @@ export default function Admissions({ text }) {
             formatTableData(admissions);
             setPageLoading(false);
         }
-    }, [showModal, formData, modalState, saveUpdateLoading, pageLoading, tableData, deleteLoading, selectedDoctor, selectedPatient])
+    }, [showModal, formData, modalState, paid, saveUpdateLoading, total, pageLoading, tableData, deleteLoading, selectedDoctor, selectedPatient])
 
     if (pageLoading == null || pageLoading == true || !assets) {
         return (
@@ -267,7 +332,7 @@ export default function Admissions({ text }) {
 
     return (
         <>
-            {userProfile.doctor == true ?
+            {userProfile.doctor == true || userProfile?.pharmacist == true ?
                 <Text style={styles.title}>Medical Records</Text>
                 :
                 <Text style={styles.title}>Admissions</Text>
@@ -308,50 +373,84 @@ export default function Admissions({ text }) {
                         <Modal.Header>Admit a Patient</Modal.Header>
                         :
                         <>
-                            {userProfile.doctor == true ?
-                                <Modal.Header>Update Medical Record</Modal.Header>
+                            {modalState == "update" ?
+                                <>
+                                    {userProfile.doctor == true ?
+                                        <Modal.Header>Update Medical Record</Modal.Header>
+                                        :
+                                        <>
+                                            {userProfile?.pharmacist == true ?
+                                                <Modal.Header>View Medical Record</Modal.Header>
+                                                :
+                                                <Modal.Header>Update an Admission</Modal.Header>
+                                            }
+                                        </>
+                                    }
+                                </>
                                 :
-                                <Modal.Header>Update an Admission</Modal.Header>
+                                <Modal.Header>Record Payment</Modal.Header>
                             }
                         </>
 
                     }
                     <Modal.Body padding={5}>
-                        <Text>Select a patient</Text>
-                        <Select variant="underlined" marginBottom={5} selectedValue={selectedPatient} width={"100%"} placeholder="Pick a patient to book" mt={1} onValueChange={val => setSelectedPatient(val)} isDisabled={userProfile?.nurse != true}>
-                            {
-                                patients.map((patientData, index) => (
-                                    <Select.Item label={patientData.name} value={patientData.id} />
-                                ))
-                            }
-                        </Select>
-                        {userProfile?.doctor != true ?
+                        {modalState == "recordPayment" ?
                             <>
-                                <Text>Select a Doctor</Text>
-                                <Select variant="underlined" marginBottom={5} selectedValue={selectedDoctor} width={"100%"} placeholder="Assign a doctor to attend to the patient" mt={1} onValueChange={val => setSelectedDoctor(val)} isDisabled={userProfile?.nurse != true}>
+                                <Text>Doctor Fee in ksh</Text>
+                                <Input key={"fee"} variant="underlined" value={formData.fee} w="100%" marginBottom={5} isDisabled={true} />
+
+                                <Text>Enter drug costs in ksh</Text>
+                                <Input key={"drugs"} variant="underlined" value={formData.drugs} placeholder="How much do the drugs cost?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("drugs", val)} />
+
+                                <Text fontWeight={"bold"}>Total Cost</Text>
+                                <Text color={"teal.500"}>ksh {total}</Text>
+                            </>
+                            :
+                            <>
+                                <Text>Select a patient</Text>
+                                <Select variant="underlined" marginBottom={5} selectedValue={selectedPatient} width={"100%"} placeholder="Pick a patient to book" mt={1} onValueChange={val => setSelectedPatient(val)} isDisabled={userProfile?.nurse != true}>
                                     {
-                                        doctors.map((doctorData, index) => (
-                                            <Select.Item label={doctorData.name + " - " + doctorData.specialization} value={doctorData.id} />
+                                        patients.map((patientData, index) => (
+                                            <Select.Item label={patientData.name} value={patientData.id} />
                                         ))
                                     }
                                 </Select>
+                                {userProfile?.doctor != true ?
+                                    <>
+                                        <Text>Select a Doctor</Text>
+                                        <Select variant="underlined" marginBottom={5} selectedValue={selectedDoctor} width={"100%"} placeholder="Assign a doctor to attend to the patient" mt={1} onValueChange={val => setSelectedDoctor(val)} isDisabled={userProfile?.nurse != true}>
+                                            {
+                                                doctors.map((doctorData, index) => (
+                                                    <Select.Item label={doctorData.name + " - " + doctorData.specialization} value={doctorData.id} />
+                                                ))
+                                            }
+                                        </Select>
+                                    </>
+                                    :
+                                    <></>
+                                }
+
+                                <Text>Symptoms</Text>
+                                <TextArea h={20} isDisabled={userProfile?.pharmacist} key={"symptoms"} variant="underlined" value={formData.symptoms} placeholder="What symptopms does the patient have?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("symptoms", val)} />
+
+                                {userProfile?.doctor == true || userProfile?.pharmacist == true ?
+                                    <>
+                                        <Text>Diagnosis</Text>
+                                        <TextArea h={20} isDisabled={userProfile?.pharmacist} key={"diagnosis"} variant="underlined" value={formData.diagnosis} placeholder="The patient was diagnosed with?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("diagnosis", val)} />
+
+                                        <Text>Notes</Text>
+                                        <TextArea h={20} isDisabled={userProfile?.pharmacist} key={"notes"} variant="underlined" value={formData.notes} placeholder="Write additional notes?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("notes", val)} />
+
+                                        <Text>Prescription</Text>
+                                        <TextArea h={20} isDisabled={userProfile?.pharmacist} key={"prescription"} variant="underlined" value={formData.prescription} placeholder="What drugs should be given to the patient?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("prescription", val)} />
+                                    </>
+                                    :
+                                    <></>
+                                }
+
                             </>
-                            :
-                            <></>
                         }
-                        <Text>Symptoms</Text>
-                        <TextArea h={20} key={"symptoms"} variant="underlined" value={formData.symptoms} placeholder="What symptopms does the patient have?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("symptoms", val)} />
 
-                        <Text>Diagnosis</Text>
-                        <TextArea h={20} key={"diagnosis"} variant="underlined" value={formData.diagnosis} placeholder="The patient was diagnosed with?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("diagnosis", val)} />
-
-                        <Text>Notes</Text>
-                        <TextArea h={20} key={"notes"} variant="underlined" value={formData.notes} placeholder="Write additional notes?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("notes", val)} />
-
-                        <Text>Prescription</Text>
-                        <TextArea h={20} key={"prescription"} variant="underlined" value={formData.prescription} placeholder="What drugs should be given to the patient?" w="100%" marginBottom={5} onChangeText={(val) => handleForm("prescription", val)} />
-
-                        
                     </Modal.Body>
                     <Modal.Footer>
                         <Button.Group space={2}>
@@ -378,11 +477,33 @@ export default function Admissions({ text }) {
                                         :
                                         <></>
                                     }
-                                    <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Updating ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
-                                        submitForm("update");
-                                    }}>
-                                        Update
-                                    </Button>
+                                    {userProfile?.pharmacist != true ?
+                                        <Button width={(saveUpdateLoading == true) ? 120 : 100} isLoadingText={"Updating ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
+                                            submitForm("update");
+                                        }}>
+                                            Update
+                                        </Button>
+                                        :
+                                        <>
+
+                                            {modalState == "recordPayment" ?
+                                                <Button width={(saveUpdateLoading == true) ? 200 : 150} isLoadingText={"Submitting ..."} isLoading={saveUpdateLoading} isDisabled={saveUpdateLoading || deleteLoading} onPress={() => {
+                                                    submitPayment();
+                                                }}>
+                                                    Submit Payment
+                                                </Button>
+                                                :
+                                                <Button width={(saveUpdateLoading == true) ? 200 : 150} 
+                                                    isDisabled={saveUpdateLoading || deleteLoading || paid == true ||
+                                                        formData?.diagnosis?.length==0 || formData?.prescription?.length==0 || formData?.notes?.length==0} onPress={() => {
+                                                    recordPayment("recordPayment");
+                                                }}>
+                                                    Record Payment
+                                                </Button>
+                                            }
+                                        </>
+
+                                    }
                                 </>
                             }
                         </Button.Group>

@@ -7,6 +7,7 @@ import Authorise from "../screens/Authorise";
 import AdminHome from '../screens/AdminHome';
 import NurseHome from '../screens/NurseHome';
 import DoctorHome from '../screens/DoctorHome';
+import PharmacistHome from '../screens/PharmacistHome';
 
 const { Screen, Navigator } = createStackNavigator();
 
@@ -30,7 +31,7 @@ export const AppNavigator = () => (
             <Screen name="Admin's Home" component={AdminHome}></Screen>            
             <Screen name="Nurse's Home" component={NurseHome}></Screen>            
             <Screen name="Doctor's Home" component={DoctorHome}></Screen>            
-            {/* <Screen name="Pharmacist's Home" component={AdminHome}></Screen>             */}
+            <Screen name="Pharmacist's Home" component={PharmacistHome}></Screen>            
         </Navigator>
     </NavigationContainer>
 )

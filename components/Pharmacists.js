@@ -6,7 +6,8 @@ import {
     Input,
     Radio,
     HStack,
-    useToast
+    useToast,
+    Image
 } from "native-base";
 import { useEffect, useState } from "react";
 import Loader from "./Loader";
