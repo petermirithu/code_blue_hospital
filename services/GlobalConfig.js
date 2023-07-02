@@ -5,7 +5,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 /**
  * API Base url
  */
-export const backendBaseUrl = "http://localhost:8000/v1/api";
+const BACKEND_BASE_URL_LOCAL = "http://localhost:8000/v1/api";
+const BACKEND_BASE_URL_PRODUCTION = "https://pyra.pythonanywhere.com/v1/api"
+export const backendBaseUrl = (Platform.OS == "web" && __DEV__)?BACKEND_BASE_URL_LOCAL:BACKEND_BASE_URL_PRODUCTION;
 
 /**
  * Dimensions
